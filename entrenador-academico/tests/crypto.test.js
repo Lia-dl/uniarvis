@@ -1,0 +1,87 @@
+// Uso: node tests/crypto.test.js <url base> <carpeta temporal>
+const {chromium}=require('playwright');
+const fs=require('fs');
+(async()=>{
+  const base=process.argv[2],tmp=process.argv[3];fs.mkdirSync(tmp,{recursive:true});
+  const b=await chromium.launch();
+  const ctx=await b.newContext({viewport:{width:1100,height:900},acceptDownloads:true});
+  const p=await ctx.newPage();
+  const res=[],errs=[];
+  const ok=(n,c,x='')=>res.push((c?'OK   ':'FALLA')+' '+n+(x?'  → '+x:''));
+  p.on('pageerror',e=>errs.push('pageerror: '+e.message));
+  p.on('console',m=>{if(m.type()==='error')errs.push('console: '+m.text())});
+  p.on('dialog',d=>d.accept());
+  const raw=()=>p.evaluate(()=>localStorage.getItem('entrenador-academico-v1'));
+  const unlock=async pw=>{await p.fill('#lp',pw);await p.click('text=Desbloquear');await p.waitForTimeout(900)};
+  await p.goto(base);
+  await p.click('text=Acepto y quiero usar el check-in');
+  await p.click('nav >> text=Ramos y syllabus');await p.click('text=Cargar datos de ejemplo');
+  const before=await p.evaluate(()=>({c:S.courses.length,d:S.wellbeing.diary.length,s:S.sessions.length}));
+  ok('hay un modo de cifrado disponible',await p.evaluate(()=>CRYPTO_OK));
+
+  // activar con validaciones
+  await p.click('nav >> text=Apoyo');
+  await p.fill('#np1','corta');await p.fill('#np2','corta');await p.click('text=Activar cifrado');
+  ok('rechaza contraseñas de menos de 8 caracteres',await p.evaluate(()=>!KEYOBJ));
+  await p.fill('#np1','clave-segura-123');await p.fill('#np2','otra-distinta-123');await p.click('text=Activar cifrado');
+  ok('rechaza contraseñas que no coinciden',await p.evaluate(()=>!KEYOBJ));
+  await p.fill('#np1','clave-segura-123');await p.fill('#np2','clave-segura-123');await p.click('text=Activar cifrado');await p.waitForTimeout(900);
+  let r=await raw();
+  ok('al activar, lo guardado queda cifrado (sin texto legible)',r.includes('"enc":1')&&!r.includes('Cálculo')&&!r.includes('courses'),r.slice(0,70));
+
+  // recargar → bloqueado
+  await p.reload();
+  ok('al abrir pide contraseña y no muestra datos',await p.evaluate(()=>!!LOCKED&&document.querySelector('#lp')!==null&&S.courses.length===0)&&!(await p.textContent('#app')).includes('Cálculo'));
+  await unlock('contraseña-equivocada');
+  ok('contraseña incorrecta no abre',await p.evaluate(()=>!!LOCKED));
+  await unlock('clave-segura-123');
+  const after=await p.evaluate(()=>({c:S.courses.length,d:S.wellbeing.diary.length,s:S.sessions.length,locked:!!LOCKED}));
+  ok('contraseña correcta abre y recupera todo',!after.locked&&after.c===before.c&&after.d===before.d&&after.s===before.s,JSON.stringify(after));
+
+  // los cambios siguen cifrados y persisten
+  await p.evaluate(()=>{S.sessions.push({id:'zz1',date:today(),courseId:S.courses[0].id,minutes:25});save()});
+  await p.waitForTimeout(700);r=await raw();
+  ok('los cambios nuevos también se guardan cifrados',r.includes('"enc":1')&&!r.includes('zz1'));
+  await p.reload();await unlock('clave-segura-123');
+  ok('los cambios persisten tras reabrir',await p.evaluate(()=>S.sessions.some(s=>s.id==='zz1')));
+
+  // respaldo cifrado
+  await p.click('nav >> text=Apoyo');
+  const [dl]=await Promise.all([p.waitForEvent('download'),p.click('text=Descargar respaldo (JSON)')]);
+  const bk=tmp+'/respaldo-cifrado.json';fs.copyFileSync(await dl.path(),bk);const bt=fs.readFileSync(bk,'utf8');
+  ok('con cifrado activo el respaldo sale cifrado',dl.suggestedFilename().includes('cifrado')&&bt.includes('"enc":1')&&!bt.includes('Cálculo'),dl.suggestedFilename());
+
+  // cambiar contraseña
+  await p.fill('#np1','nueva-clave-456');await p.fill('#np2','nueva-clave-456');await p.click('text=Cambiar contraseña');await p.waitForTimeout(900);
+  await p.reload();await unlock('clave-segura-123');
+  ok('la contraseña anterior deja de funcionar tras cambiarla',await p.evaluate(()=>!!LOCKED));
+  await unlock('nueva-clave-456');
+  ok('la contraseña nueva funciona',await p.evaluate(()=>!LOCKED&&S.courses.length===4));
+
+  // desactivar → vuelve a texto plano
+  await p.click('nav >> text=Apoyo');await p.click('text=Desactivar cifrado');await p.waitForTimeout(700);
+  r=await raw();ok('al desactivar, vuelve a guardarse en claro',!r.includes('"enc"')&&JSON.parse(r).courses.length===4);
+  await p.reload();ok('abre sin contraseña tras desactivar',await p.evaluate(()=>!LOCKED&&S.courses.length===4));
+
+  // restaurar el respaldo cifrado (con la contraseña antigua)
+  await p.click('nav >> text=Apoyo');
+  await p.setInputFiles('input[onchange="importData(this)"]',bk);await p.waitForTimeout(1200);
+  ok('restaurar respaldo cifrado pide la contraseña',await p.evaluate(()=>!!LOCKED));
+  await unlock('clave-segura-123');
+  ok('el respaldo cifrado se abre con su contraseña original',await p.evaluate(()=>!LOCKED&&S.courses.length===4&&S.sessions.some(s=>s.id==='zz1')));
+
+  // olvidé la contraseña
+  await p.reload();await p.click('text=¿Olvidaste la contraseña?');await p.click('text=Borrar los datos cifrados de este navegador');await p.waitForTimeout(500);
+  ok('"olvidé la contraseña" borra lo cifrado y deja la app limpia',await p.evaluate(()=>!LOCKED&&S.courses.length===0)&&(await raw())===null||(await raw())&&!(await raw()).includes('"enc"'));
+
+  // borrar todo desactiva el cifrado
+  await p.click('text=Acepto y quiero usar el check-in').catch(()=>{});
+  await p.click('nav >> text=Apoyo');await p.fill('#np1','clave-segura-123');await p.fill('#np2','clave-segura-123');await p.click('text=Activar cifrado');await p.waitForTimeout(800);
+  await p.click('text=Borrar todo');await p.waitForTimeout(700);r=await raw();
+  ok('"Borrar todo" también desactiva el cifrado',!!r&&!r.includes('"enc"')&&await p.evaluate(()=>!KEYOBJ));
+
+  ok('sin errores de JavaScript',errs.length===0,errs.join(' || '));
+  console.log(res.join('\n'));
+  process.exitCode=res.some(r=>r.startsWith('FALLA'))?1:0;
+  await b.close();
+})().catch(e=>{console.error('ERROR DEL TEST',e);process.exit(1)});

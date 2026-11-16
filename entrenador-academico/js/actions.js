@@ -1,0 +1,233 @@
+/* Entrenador Académico · Acciones del usuario, datos anónimos de ramos, privacidad y datos de ejemplo */
+/* ===================== Acciones ===================== */
+function go(t){stopBreath(true);stopMed(true);tab=t;render();try{window.scrollTo(0,0)}catch(e){}}
+function goBreath(k){stopBreath(true);stopMed(true);bsel=k;tab='bienestar';render();startBreath()}
+function goMed(id){stopBreath(true);stopMed(true);tab='bienestar';render();startMed(id)}
+function toggleTask(id){
+  const t=S.tasks.find(x=>x.id===id);if(!t)return;
+  if(!t.done){
+    if(doneToday()>=capFor(today()))return toast('Hoy ya completaste tu capacidad. Descansar también es parte del plan.');
+    t.done=true;t.date=today();
+    S.sessions.push({id:uid(),date:today(),courseId:t.courseId,minutes:t.minutes,taskId:t.id});
+  }else{t.done=false;S.sessions=S.sessions.filter(x=>x.taskId!==t.id)}
+  save();
+  if(doneToday()>=capFor(today()))replanAll();
+  render();
+}
+function pullNext(){
+  const t0=today(),nxt=S.tasks.filter(t=>!t.done&&t.date>t0).sort((a,b)=>a.date.localeCompare(b.date))[0];
+  if(!nxt)return;
+  if(dayLoad(t0)+nxt.minutes>capFor(t0))return toast('Eso superaría tu capacidad de hoy.');
+  nxt.date=t0;save();render();
+}
+function logFree(){
+  const c=$('#fc').value,m=parseInt($('#fm').value,10);
+  if(!c||!(m>0))return toast('Elige un ramo y los minutos.');
+  if(doneToday()>=capFor(today()))return toast('Hoy ya completaste tu capacidad. Descansar también es parte del plan.');
+  S.sessions.push({id:uid(),date:today(),courseId:c,minutes:m});save();
+  if(doneToday()>=capFor(today()))replanAll();
+  render();
+}
+function setMin(){
+  const mi=parseInt($('#smin').value,10);
+  if(!(mi>=15)||mi>240)return toast('Pon un mínimo entre 15 y 240 minutos.');
+  S.settings.min=mi;replanAll();toast('Mínimo actualizado.');render();
+}
+function addCourse(){
+  const n=$('#cn').value.trim();if(!n)return;
+  S.courses.push({id:uid(),name:n,difficulty:parseInt($('#cd').value,10),color:COLORS[S.courses.length%COLORS.length]});
+  save();render();
+}
+function setDiff(id,v){course(id).difficulty=+v;replanAll();render()}
+function delCourse(id){
+  if(!confirm('¿Eliminar el ramo con sus clases, fechas y tareas?'))return;
+  S.courses=S.courses.filter(c=>c.id!==id);
+  ['classes','events','tasks','sessions'].forEach(k=>S[k]=S[k].filter(x=>x.courseId!==id));
+  save();render();
+}
+function addClass(){
+  const c=$('#kc').value,d=+$('#kd').value,a=$('#ka').value,b=$('#kb').value;
+  if(!c||!a||!b||toMin(b)<=toMin(a))return toast('Revisa ramo y horas.');
+  S.classes.push({id:uid(),courseId:c,day:d,start:a,end:b});save();replanAll();render();
+}
+function delClass(id){S.classes=S.classes.filter(x=>x.id!==id);save();replanAll();render()}
+function addEvent(){
+  const c=$('#ec').value,t=$('#et').value.trim(),d=$('#ed').value,ty=$('#ey').value;
+  if(!c||!t||!d)return toast('Completa ramo, título y fecha.');
+  S.events.push({id:uid(),courseId:c,title:t,date:d,type:ty});replanAll();render();
+}
+function delEvent(id){S.events=S.events.filter(e=>e.id!==id);S.tasks=S.tasks.filter(t=>t.eventId!==id||t.done);save();render()}
+
+/* ===================== Datos anónimos y agregados de ramos ===================== */
+const EVAL_TYPES={certamenes:'Certámenes',entregas:'Entregas / proyectos',mixto:'Mixto',controles:'Controles frecuentes'};
+const MIN_N=3;                                   // mínimo de aportes para mostrar un promedio (protege el anonimato)
+function aggRatings(){
+  const g={};
+  S.ratings.forEach(r=>{const k=norm(r.course);(g[k]=g[k]||{name:r.course,items:[]}).items.push(r)});
+  return Object.values(g).map(g=>{
+    const n=g.items.length,a=k=>avg(g.items.map(x=>x[k])),cnt={};
+    g.items.forEach(x=>cnt[x.evalType]=(cnt[x.evalType]||0)+1);
+    return{name:g.name,n,load:a('load'),diff:a('diff'),hours:a('hours'),evalType:Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0][0]};
+  }).sort((a,b)=>a.name.localeCompare(b.name));
+}
+const collective=name=>aggRatings().find(a=>norm(a.name)===norm(name)&&a.n>=MIN_N)||null;
+function addRating(){
+  const cid=$('#rc').value;if(!cid)return toast('Primero agrega tus ramos.');
+  const r={id:uid(),course:cname(cid),load:+$('#rl').value,diff:+$('#rd').value,evalType:$('#rt').value,hours:clamp(parseFloat($('#rh').value)||0,0,40),mine:true};
+  S.ratings=S.ratings.filter(x=>!(x.mine&&norm(x.course)===norm(r.course)));
+  S.ratings.push(r);save();toast('Gracias. Tu aporte es anónimo: solo guarda números.');render();
+}
+function exportRatings(){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(S.ratings.map(({course,load,diff,evalType,hours})=>({course,load,diff,evalType,hours})),null,2)],{type:'application/json'}));
+  a.download='datos-agregados-ramos.json';a.click();
+}
+async function importRatings(inp){
+  const f=inp.files[0];if(!f)return;
+  try{
+    const arr=JSON.parse(await f.text());let n=0;
+    arr.forEach(r=>{if(r&&typeof r.course==='string'&&r.load>=1&&r.load<=5&&r.diff>=1&&r.diff<=5&&EVAL_TYPES[r.evalType]){
+      S.ratings.push({id:uid(),course:r.course.slice(0,80),load:+r.load,diff:+r.diff,evalType:r.evalType,hours:clamp(+r.hours||0,0,40)});n++}});
+    save();toast(`${n} aportes importados.`);render();
+  }catch(e){toast('Ese archivo no tiene el formato esperado.')}
+}
+
+/* ===================== Privacidad y datos ===================== */
+async function wipe(){if(confirm('Se borrarán todos tus datos de este navegador (y se desactivará el cifrado, si lo usabas). ¿Continuar?')){await dropKey();S=fresh();save();loadDraft();render()}}
+function deleteHealth(){
+  if(!confirm('Se borrarán tus check-ins y tu diario. ¿Continuar?'))return;
+  S.wellbeing.diary=[];S.adapt=null;S.soft=null;S.dismissed={};save();loadDraft();replanAll();toast('Tus datos de bienestar fueron borrados.');render();
+}
+async function exportData(){
+  S.lastBackup=today();S.backupSnooze=null;save();
+  let body,name;
+  if(KEYOBJ){await writeQ;body=localStorage.getItem(KEY);name='entrenador-academico-respaldo-cifrado.json'}   // ya está cifrado
+  else{body=JSON.stringify(S,null,2);name='entrenador-academico-respaldo.json'}
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([body],{type:'application/json'}));
+  a.download=name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  toast(KEYOBJ?'Respaldo cifrado descargado. Para restaurarlo necesitarás tu contraseña.':'Respaldo descargado SIN cifrar: guárdalo en un lugar seguro.');render();
+}
+/* --- Recordatorio de respaldo (los datos viven solo en este navegador) --- */
+function backupDue(){
+  if(!S.courses.length)return false;
+  if(diffDays(S.lastBackup||S.createdAt,today())<14)return false;
+  return !S.backupSnooze||S.backupSnooze<=today();
+}
+function snoozeBackup(){S.backupSnooze=addDays(today(),7);save();render()}
+function backupHtml(){
+  if(!backupDue())return '';
+  const n=diffDays(S.lastBackup||S.createdAt,today());
+  return `<div class="banner info">Tus datos viven solo en este navegador: si se borran, se pierden. ${S.lastBackup?`Hace ${n} días que no guardas un respaldo.`:'Aún no has guardado ningún respaldo.'}
+    <div class="row" style="margin-top:8px"><button class="btn sec" onclick="exportData()">Descargar respaldo</button>
+    <button class="btn sec" onclick="snoozeBackup()">Recordármelo en una semana</button></div></div>`;
+}
+
+/* --- Restaurar respaldo: se valida todo y solo se copian campos conocidos (un archivo ajeno no puede inyectar HTML) --- */
+const RX={id:/^[\w-]{1,40}$/,date:/^\d{4}-\d{2}-\d{2}$/,time:/^\d{2}:\d{2}$/,color:/^#[0-9a-fA-F]{6}$/};
+function validState(j){
+  if(!j||typeof j!=='object'||Array.isArray(j))return 'no es un respaldo';
+  const str=(v,n)=>typeof v==='string'&&v.length<=n,int=(v,a,b)=>Number.isInteger(v)&&v>=a&&v<=b,num=(v,a,b)=>typeof v==='number'&&v>=a&&v<=b;
+  for(const k of ['courses','classes','events','tasks','sessions'])if(!Array.isArray(j[k]))return 'falta '+k;
+  for(const c of j.courses)if(!(c&&RX.id.test(c.id)&&str(c.name,120)&&int(c.difficulty,1,5)&&RX.color.test(c.color)))return 'ramos';
+  for(const k of j.classes)if(!(k&&RX.id.test(k.id)&&RX.id.test(k.courseId)&&int(k.day,0,6)&&RX.time.test(k.start)&&RX.time.test(k.end)))return 'horario';
+  for(const e of j.events)if(!(e&&RX.id.test(e.id)&&RX.id.test(e.courseId)&&str(e.title,200)&&RX.date.test(e.date)&&Object.prototype.hasOwnProperty.call(TYPE_LABEL,e.type)))return 'fechas';
+  for(const t of j.tasks)if(!(t&&RX.id.test(t.id)&&RX.id.test(t.eventId)&&RX.id.test(t.courseId)&&str(t.title,300)&&RX.date.test(t.date)&&num(t.minutes,1,600)&&typeof t.done==='boolean'))return 'tareas';
+  for(const s of j.sessions)if(!(s&&RX.id.test(s.id)&&RX.id.test(s.courseId)&&RX.date.test(s.date)&&num(s.minutes,1,1440)&&(s.taskId===undefined||RX.id.test(s.taskId))))return 'sesiones';
+  const dia=j.wellbeing&&j.wellbeing.diary;
+  if(dia!==undefined){
+    if(!Array.isArray(dia))return 'diario';
+    for(const e of dia)if(!(e&&RX.date.test(e.date)&&[e.mood,e.energy,e.sleep].every(v=>v==null||int(v,1,5))&&(e.tags===undefined||(Array.isArray(e.tags)&&e.tags.every(t=>str(t,40))))&&(e.note===undefined||str(e.note,5000))))return 'diario';
+  }
+  if(j.ratings!==undefined){
+    if(!Array.isArray(j.ratings))return 'aportes';
+    for(const r of j.ratings)if(!(r&&str(r.course,80)&&int(r.load,1,5)&&int(r.diff,1,5)&&Object.prototype.hasOwnProperty.call(EVAL_TYPES,r.evalType)&&num(r.hours,0,40)))return 'aportes';
+  }
+  return null;
+}
+function cleanState(j){
+  const c=fresh();
+  ['courses','classes','events','tasks','sessions'].forEach(k=>c[k]=j[k]);
+  c.ratings=j.ratings||[];
+  c.settings={min:int15(j.settings&&j.settings.min)?j.settings.min:60};
+  c.wellbeing={diary:((j.wellbeing&&j.wellbeing.diary)||[]).map(e=>({date:e.date,mood:e.mood??null,energy:e.energy??null,sleep:e.sleep??null,tags:e.tags||[],note:e.note||'',ts:Number(e.ts)||0}))};
+  c.support={name:String((j.support&&j.support.name)||'').slice(0,120),contact:String((j.support&&j.support.contact)||'').slice(0,300)};
+  c.consent=j.consent&&typeof j.consent.health==='boolean'?{health:j.consent.health,at:today()}:null;
+  c.lastBackup=typeof j.lastBackup==='string'&&RX.date.test(j.lastBackup)?j.lastBackup:null;
+  return c;
+}
+const int15=v=>Number.isInteger(v)&&v>=15&&v<=240;
+async function importData(inp){
+  const f=inp.files[0];if(!f)return;
+  try{
+    const j=JSON.parse(await f.text());
+    if(j&&j.enc){                                  // respaldo cifrado: se instala tal cual y la app pedirá la contraseña
+      if(!validBlob(j))throw new Error('archivo cifrado dañado');
+      if(!confirm('Este respaldo está cifrado. Se reemplazarán los datos actuales y la app te pedirá la contraseña con la que se cifró. ¿Continuar?')){inp.value='';return}
+      await dropKey();localStorage.setItem(KEY,JSON.stringify(j));location.reload();return;
+    }
+    const err=validState(j);
+    if(err)throw new Error(err);
+    if(!confirm('Esto reemplazará todos los datos actuales de este navegador por los del respaldo. ¿Continuar?')){inp.value='';return}
+    S=cleanState(j);save();loadDraft();replanAll();toast('Respaldo restaurado.');render();
+  }catch(e){toast('Ese archivo no parece un respaldo válido de esta app ('+e.message+').')}
+  inp.value='';
+}
+
+/* --- Exportar fechas importantes a tu calendario (.ics) --- */
+function icsFold(line){const cs=Array.from(line),out=[];while(cs.length>60)out.push(cs.splice(0,60).join(''));out.push(cs.join(''));return out.join('\r\n ')}
+const icsEsc=s=>String(s).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n');
+function buildICS(){
+  const stamp=new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+Z$/,'Z'),dt=d=>d.replace(/-/g,'');
+  const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Entrenador Academico//ES','CALSCALE:GREGORIAN'];
+  S.events.forEach(e=>L.push('BEGIN:VEVENT',`UID:${e.id}@entrenador-academico`,`DTSTAMP:${stamp}`,
+    `DTSTART;VALUE=DATE:${dt(e.date)}`,`DTEND;VALUE=DATE:${dt(addDays(e.date,1))}`,
+    icsFold('SUMMARY:'+icsEsc(`${TYPE_LABEL[e.type]} · ${cname(e.courseId)} · ${e.title}`)),'END:VEVENT'));
+  L.push('END:VCALENDAR');
+  return L.join('\r\n')+'\r\n';
+}
+function exportICS(){
+  if(!S.events.length)return toast('Aún no hay fechas para exportar.');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([buildICS()],{type:'text/calendar'}));
+  a.download='fechas-importantes.ics';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  toast('Listo: importa el archivo en Google Calendar, Outlook o Apple Calendar.');
+}
+
+function fillUdeC(){S.support={name:'DISE UdeC · Bienestar Estudiantil',contact:'bienestar@udec.cl · dise.udec.cl'};save();toast('Guardado. Verifica horarios y cómo pedir hora en el sitio oficial.');render()}
+function saveSupport(){S.support={name:$('#sn').value.trim().slice(0,120),contact:$('#sc').value.trim().slice(0,300)};save();toast('Guardado en este navegador.');render()}
+
+function loadDemo(){
+  if(S.courses.length&&!confirm('Esto reemplazará tus datos actuales. ¿Continuar?'))return;
+  S=fresh();inval();const t=today();
+  S.consent={health:true,at:t};                    // el ejemplo activa el check-in para poder probarlo
+  const C0=(n,d,i)=>({id:uid(),name:n,difficulty:d,color:COLORS[i]});
+  const cs=[C0('Cálculo III',5,0),C0('Termodinámica',4,1),C0('Estadística',3,2),C0('Economía',2,3)];
+  S.courses=cs;
+  [[0,0,'08:10','09:40'],[0,2,'08:10','09:40'],[1,1,'10:15','11:45'],[1,3,'10:15','11:45'],[2,0,'14:30','16:00'],[2,3,'14:30','16:00'],[3,4,'08:10','09:40']]
+    .forEach(([ci_,d,a,b])=>S.classes.push({id:uid(),courseId:cs[ci_].id,day:d,start:a,end:b}));
+  [[0,6,'Certamen 2','evaluacion'],[1,9,'Certamen 1','evaluacion'],[2,8,'Entrega informe de laboratorio','entrega'],[3,12,'Control 2','control'],[0,22,'Certamen 3','evaluacion'],[2,24,'Examen','evaluacion']]
+    .forEach(([ci_,off,ti,ty])=>S.events.push({id:uid(),courseId:cs[ci_].id,title:ti,date:addDays(t,off),type:ty}));
+  const mon=mondayOf(t);                           // fechas pasadas para que el diario pueda mostrar patrones
+  [[0,-6,'Certamen 1','evaluacion'],[1,-5,'Control 1','control'],[2,-3,'Entrega 1','entrega'],[3,-12,'Control 1','control'],
+   [0,-20,'Certamen 0','evaluacion'],[1,-19,'Informe previo','entrega'],[2,-18,'Control 1','control'],[3,-25,'Control 0','control']]
+    .forEach(([ci_,off,ti,ty])=>S.events.push({id:uid(),courseId:cs[ci_].id,title:ti,date:addDays(mon,off),type:ty}));
+  const factor=[0.9,0.35,1,1.1];                   // Termodinámica con poca atención, para ver el mapa de calor
+  for(let k=1;k<=20;k++)cs.forEach((c,i)=>{
+    if(Math.random()<0.7)S.sessions.push({id:uid(),date:addDays(t,-k),courseId:c.id,minutes:Math.round((20+Math.random()*50)*factor[i])});
+  });
+  const r=()=>Math.random()-0.5;
+  for(let k=1;k<=24;k++){
+    if(Math.random()<0.15)continue;
+    const d=addDays(t,-k),wl=S.events.filter(e=>e.type!=='otro'&&mondayOf(e.date)===mondayOf(d)).length,heavy=wl>=3;
+    S.wellbeing.diary.push({date:d,mood:clamp(Math.round(3.9-(heavy?1.3:0)+r()*1.2),1,5),energy:clamp(Math.round(3.8-(heavy?1:0)+r()*1.2),1,5),
+      sleep:clamp(Math.round(3.6-(heavy?1:0)+r()*1.2),1,5),tags:[],note:'',ts:Date.now()});
+  }
+  const R=(name,load,diff,evalType,hours)=>S.ratings.push({id:uid(),course:name,load,diff,evalType,hours,demo:true});
+  [[5,5,'certamenes',12],[4,5,'certamenes',10],[5,4,'certamenes',11]].forEach(a=>R('Cálculo III',...a));
+  [[4,4,'certamenes',8],[4,5,'certamenes',9],[3,4,'mixto',7],[4,4,'certamenes',8]].forEach(a=>R('Termodinámica',...a));
+  [[3,3,'mixto',6],[3,3,'entregas',7],[4,3,'mixto',6]].forEach(a=>R('Estadística',...a));
+  [[2,2,'controles',4],[2,2,'controles',3],[3,2,'mixto',4]].forEach(a=>R('Economía',...a));
+  loadDraft();replanAll();toast('Datos de ejemplo cargados. Activé el check-in solo para el ejemplo; puedes revocarlo en Apoyo.');render();
+}

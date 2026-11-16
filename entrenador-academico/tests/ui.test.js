@@ -1,0 +1,150 @@
+// Uso: node tests/ui.test.js <ruta-al-html> <carpeta-capturas>
+const {chromium}=require('playwright');
+const fs=require('fs');
+(async()=>{
+  const file=process.argv[2],shots=process.argv[3];
+  fs.mkdirSync(shots,{recursive:true});
+  const b=await chromium.launch();
+  const p=await b.newPage({viewport:{width:1100,height:900}});
+  const errs=[],res=[];
+  const ok=(name,cond,extra='')=>res.push((cond?'OK   ':'FALLA')+' '+name+(extra?'  → '+extra:''));
+  p.on('pageerror',e=>errs.push('pageerror: '+e.message));
+  p.on('console',m=>{if(m.type()==='error')errs.push('console: '+m.text())});
+  p.on('dialog',d=>d.accept());
+  await p.goto('file://'+file);
+
+  // 1. Primera pantalla: consentimiento explícito
+  let t=await p.textContent('#app');
+  ok('primera vez muestra el consentimiento',t.includes('Antes de empezar'));
+  await p.click('text=Acepto y quiero usar el check-in');
+
+  // 2. Datos de ejemplo
+  await p.click('nav >> text=Ramos y syllabus');
+  await p.click('text=Cargar datos de ejemplo');
+  await p.click('nav >> text=Hoy');
+  const base=await p.evaluate(()=>({tasks:S.tasks.length,sizes:[...new Set(S.tasks.map(t=>t.minutes))].sort((a,b)=>a-b),
+    cap:capFor(today()),min:minFor(today())}));
+  ok('plan generado con micro-tareas',base.tasks>20,JSON.stringify(base));
+  ok('micro-tareas entre 15 y 30 min',base.sizes.every(x=>x>=15&&x<=30),'tamaños '+base.sizes.join(','));
+
+  // 3. Ningún día supera su capacidad (salvo que se avise)
+  const over=await p.evaluate(()=>{const m={};S.tasks.filter(t=>!t.done).forEach(t=>m[t.date]=(m[t.date]||0)+t.minutes);
+    return Object.entries(m).filter(([d,v])=>v+0>planCap(d)).map(([d,v])=>d+':'+v+'>'+planCap(d))});
+  ok('ningún día planificado supera su capacidad',over.length===0,over.join(' '));
+
+  // 4. Check-in con energía baja → solo el mínimo y se mueve el resto
+  const before=await p.evaluate(()=>S.tasks.filter(t=>t.date===today()&&!t.done).reduce((a,t)=>a+t.minutes,0));
+  const totalBefore=await p.evaluate(()=>S.tasks.filter(t=>!t.done).reduce((a,t)=>a+t.minutes,0));
+  await p.locator('.ci-row').nth(0).locator('.sc').nth(0).click();
+  await p.locator('.ci-row').nth(1).locator('.sc').nth(1).click();
+  await p.locator('.ci-row').nth(2).locator('.sc').nth(1).click();
+  await p.click('text=Guardar y ajustar mi plan');
+  const low=await p.evaluate(()=>({low:lowMode(today()),min:minFor(today()),cap:capFor(today()),
+    pend:S.tasks.filter(t=>t.date===today()&&!t.done).reduce((a,t)=>a+t.minutes,0),
+    total:S.tasks.filter(t=>!t.done).reduce((a,t)=>a+t.minutes,0)}));
+  ok('energía baja activa el modo suave',low.low);
+  ok('hoy queda solo el mínimo viable',low.pend<=low.min,`pendiente hoy ${low.pend} (antes ${before}) / mínimo ${low.min}`);
+  ok('lo movido no se pierde (total pendiente se conserva ±15)',Math.abs(low.total-totalBefore)<=15,`antes ${totalBefore} después ${low.total}`);
+  t=await p.textContent('#app');
+  ok('el mensaje explica el ajuste sin culpa',t.includes('solo lo esencial'));
+  ok('no aparece la palabra "atrasad"',!/atrasad/i.test(t));
+  await p.screenshot({path:shots+'/01-hoy-energia-baja.png',fullPage:true});
+
+  // 5. Semanas críticas del ejemplo
+  const cr=await p.evaluate(()=>criticalClusters().map(g=>g.events.length));
+  ok('detecta la semana crítica del ejemplo',cr.length>=1&&cr[0]>=3,JSON.stringify(cr));
+  const startBefore=await p.evaluate(()=>firstTaskDate(criticalClusters()[0].events));
+  if(await p.locator('text=Reservar margen extra').count()){
+    await p.click('text=Reservar margen extra');
+    const startAfter=await p.evaluate(()=>firstTaskDate(criticalClusters()[0].events));
+    ok('"reservar margen extra" adelanta el inicio',startAfter<=startBefore,`${startBefore} → ${startAfter}`);
+  }else ok('botón de margen extra visible',false);
+
+  // 6. Reprogramación sin culpa: tareas pendientes del pasado se reacomodan
+  const mv=await p.evaluate(()=>{const d=addDays(today(),-2);S.tasks.filter(t=>!t.done).slice(0,3).forEach(t=>t.date=d);
+    replanAll();return {stale:S.tasks.filter(t=>!t.done&&t.date<today()).length,moved:S.moved}});
+  ok('tareas pendientes viejas se reacomodan solas',mv.stale===0&&mv.moved&&mv.moved.n===3,JSON.stringify(mv));
+
+  // 7. Patrones del diario
+  const pt=await p.evaluate(()=>{const r=patterns();return {need:r.need,n:r.items.length}});
+  ok('patrones con datos de ejemplo',!pt.need&&pt.n>=1,JSON.stringify(pt));
+
+  // 8. Alerta temprana (ánimo bajo 3 días) y apoyo
+  await p.evaluate(()=>{[0,1,2].forEach(k=>{const d=addDays(today(),-k);S.wellbeing.diary=S.wellbeing.diary.filter(e=>e.date!==d);
+    S.wellbeing.diary.push({date:d,energy:2,mood:1,sleep:2,tags:[],note:'',ts:1})});save();render()});
+  t=await p.textContent('#app');
+  ok('alerta temprana amable aparece',t.includes('ánimo bajo')&&t.includes('Ver opciones de apoyo'));
+  await p.screenshot({path:shots+'/02-hoy-alerta.png',fullPage:true});
+
+  // 9. Pausas ligadas al calendario (evento hoy y mañana)
+  await p.evaluate(()=>{const c=S.courses[0].id;S.events.push({id:'x1',courseId:c,title:'Prueba hoy',date:today(),type:'evaluacion'},
+    {id:'x2',courseId:c,title:'Prueba mañana',date:addDays(today(),1),type:'evaluacion'});save();render()});
+  const pi=await p.evaluate(()=>pauseItems().map(x=>x.t));
+  ok('pausas antes/después de pruebas',pi.some(x=>x.includes('Hoy'))&&pi.some(x=>x.includes('Mañana')),pi.join(' | '));
+
+  // 10. Respiración guiada arranca y se detiene
+  await p.evaluate(()=>goBreath('caja'));await p.waitForTimeout(1400);
+  const bl=await p.textContent('#blabel');ok('respiración guiada en marcha',bl.length>2&&bl!=='Listo cuando quieras',bl);
+  await p.evaluate(()=>stopBreath());
+
+  // 11. Consentimiento: al revocar, el check-in deja de influir en la capacidad
+  const capWith=await p.evaluate(()=>capFor(today()));
+  await p.evaluate(()=>{S.consent={health:false,at:today()};save()});
+  const capWithout=await p.evaluate(()=>capFor(today()));
+  ok('sin consentimiento el check-in no cambia la capacidad',capWithout>capWith,`con ${capWith} sin ${capWithout}`);
+  await p.evaluate(()=>{S.consent={health:true,at:today()};save()});
+
+  // 11b. Micro-tareas: siempre entre 15 y 30 min y suman el total
+  const sp=await p.evaluate(()=>{const bad=[];for(const ch of [15,25,30])for(let t=15;t<=900;t+=5){const s=splitMinutes(t,ch);
+    if(s.reduce((a,x)=>a+x,0)!==t||s.some(x=>x<15||x>30))bad.push(t+'/'+ch+':'+s.join(','))}return bad.slice(0,5)});
+  ok('splitMinutes: bloques de 15–30 min que suman el total',sp.length===0,sp.join(' | '));
+  const sz=await p.evaluate(()=>[...new Set(S.tasks.map(t=>t.minutes))].sort((a,b)=>a-b));
+  ok('plan real sin micro-tareas fuera de 15–30',sz.every(x=>x>=15&&x<=30),sz.join(','));
+
+  // 11c. Revocar consentimiento borra (si aceptas) y deja de usar el check-in
+  await p.evaluate(()=>setConsent(false));
+  const rv=await p.evaluate(()=>({diary:S.wellbeing.diary.length,ci:ci(today()),consent:S.consent.health}));
+  ok('revocar consentimiento borra los check-ins y no se usan',rv.diary===0&&rv.ci===null&&rv.consent===false,JSON.stringify(rv));
+  await p.evaluate(()=>setConsent(true));
+
+  // 11d. Apoyo: sugerencia UdeC editable
+  await p.evaluate(()=>{S.support={name:'',contact:''};save();go('apoyo')});
+  t=await p.textContent('#app');ok('Apoyo sugiere datos de la DISE UdeC',t.includes('dise.udec.cl')&&t.includes('*4141')&&t.includes('600 360 7777'));
+  await p.evaluate(()=>fillUdeC());t=await p.textContent('#app');
+  ok('guardar datos UdeC los deja visibles',t.includes('bienestar@udec.cl')&&!t.includes('Guardar estos datos'));
+  await p.screenshot({path:shots+'/03-apoyo.png',fullPage:true});
+
+  // 11e. Lectura de syllabus: rango de fechas, fecha pasada, tipo desconocido
+  const dv=await p.evaluate(()=>detectEvents('Certamen 1: 12 de noviembre\nEntrega informe 20/12/2026\nSemana 3 (15-19 de marzo)\nControl 2 - 5-12-2026\nTaller 1 de enero de 2020',S.courses[0].id).map(e=>e.date+'|'+e.type+'|keep='+e.keep));
+  ok('syllabus: detecta fechas y las deja para confirmar',dv.length>=4,dv.join(' ; '));
+
+  // 12. Migración desde el estado de la versión anterior (con reseñas de texto libre)
+  await p.evaluate(()=>{localStorage.setItem('entrenador-academico-v1',JSON.stringify({courses:[{id:'c1',name:'Cálculo',difficulty:3,color:'#3b6df0'}],
+    classes:[],events:[],tasks:[],sessions:[],reviews:[{id:'r',courseId:'c1',cat:'cuello',src:'Docente',text:'texto libre',votes:1}],
+    settings:{min:90,max:240},lastPlan:null,wellbeing:{diary:[{date:'2026-10-27',mood:2,tags:['Estrés'],note:'hola',ts:1}],practices:[]}}))});
+  await p.reload();
+  const mg=await p.evaluate(()=>({reviews:('reviews' in S),consent:S.consent,courses:S.courses.length,min:S.settings.min}));
+  ok('migración conserva ramos y mínimo',mg.courses===1&&mg.min===90,JSON.stringify(mg));
+  ok('migración elimina reseñas de texto libre antiguas',!mg.reviews);
+  ok('migración pide consentimiento de nuevo',mg.consent===null);
+
+  // 13. Todas las pestañas renderizan sin errores
+  await p.evaluate(()=>{S=fresh();save()});await p.reload();
+  await p.click('text=Acepto y quiero usar el check-in');
+  await p.click('nav >> text=Ramos y syllabus');await p.click('text=Cargar datos de ejemplo');
+  for(const [k,label] of [['hoy','Hoy'],['semana','Semana'],['ramos','Ramos y syllabus'],['bienestar','Bienestar'],['apoyo','Apoyo'],['salud','Mapa de calor'],['datos','Datos de ramos']]){
+    await p.click('nav >> text="'+label+'"');
+    const len=(await p.textContent('#app')).length;ok('pestaña '+label+' renderiza',len>200,len+' caracteres');
+    await p.screenshot({path:shots+'/tab-'+k+'.png',fullPage:true});
+  }
+  // 14. Móvil
+  await p.setViewportSize({width:390,height:800});await p.click('nav >> text=Hoy');
+  const sw=await p.evaluate(()=>document.documentElement.scrollWidth);
+  ok('sin scroll horizontal en móvil (390px)',sw<=392,'ancho '+sw);
+  await p.screenshot({path:shots+'/mobile-hoy.png',fullPage:false});
+
+  ok('sin errores de JavaScript en consola',errs.length===0,errs.join(' || '));
+  console.log(res.join('\n'));
+  process.exitCode=res.some(r=>r.startsWith('FALLA'))?1:0;
+  await b.close();
+})().catch(e=>{console.error('ERROR DEL TEST',e);process.exit(1)});
