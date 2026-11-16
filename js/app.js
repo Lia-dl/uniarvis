@@ -4,7 +4,9 @@ const TABS=[['hoy','Hoy'],['semana','Semana'],['ramos','Ramos y syllabus'],['bie
 function render(){
   if(LOCKED){$('#nav').innerHTML='';$('#app').innerHTML=lockView();const lp=$('#lp');if(lp)try{lp.focus()}catch(e){}return}
   $('#nav').innerHTML=TABS.map(([k,v])=>`<button class="${k===tab?'on':''}" onclick="go('${k}')">${v}</button>`).join('');
-  $('#app').innerHTML={hoy:viewHoy,semana:viewSemana,ramos:viewRamos,bienestar:viewBienestar,apoyo:viewApoyo,salud:viewSalud,datos:viewDatos}[tab]();
+  const app=$('#app');
+  app.innerHTML={hoy:viewHoy,semana:viewSemana,ramos:viewRamos,bienestar:viewBienestar,apoyo:viewApoyo,salud:viewSalud,datos:viewDatos}[tab]();
+  app.style.animation='none';void app.offsetWidth;app.style.animation='';
 }
 function start(){loadDraft();if(S.lastPlan!==today()&&S.courses.length)replanAll();render()}
 boot();
