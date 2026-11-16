@@ -2,7 +2,7 @@
 /* ===================== Estado y persistencia (solo en este navegador) ===================== */
 const KEY='entrenador-academico-v1';
 const fresh=()=>({courses:[],classes:[],events:[],tasks:[],sessions:[],ratings:[],settings:{min:60},lastPlan:null,
-  wellbeing:{diary:[]},createdAt:today(),lastBackup:null,backupSnooze:null,consent:null,soft:null,adapt:null,moved:null,dismissed:{},support:{name:'',contact:''}});
+  wellbeing:{diary:[]},createdAt:today(),lastBackup:null,backupSnooze:null,consent:null,soft:null,adapt:null,moved:null,dismissed:{},support:{name:'',contact:''},profile:{name:'',career:'',onboarded:false}});
 function migrate(s){
   const f=fresh();for(const k in f)if(s[k]===undefined)s[k]=f[k];
   if(!s.wellbeing||!Array.isArray(s.wellbeing.diary))s.wellbeing={diary:[]};
@@ -10,6 +10,10 @@ function migrate(s){
   delete s.settings.max;                          // la capacidad máxima ahora se calcula cada día
   delete s.reviews;                               // reseñas de texto libre de versiones anteriores: ya no se guardan
   if(s.wellbeing)delete s.wellbeing.practices;
+  if(!s.profile||typeof s.profile!=='object')s.profile={name:'',career:'',onboarded:false};
+  if(s.profile.name==null)s.profile.name=''; if(s.profile.career==null)s.profile.career='';
+  if(typeof s.profile.onboarded!=='boolean')s.profile.onboarded=!!(s.profile.name);
+  if(Array.isArray(s.courses))s.courses.forEach(c=>{if(!Array.isArray(c.grades))c.grades=[]});
   return s;
 }
 let S=fresh();                    // se carga en boot() (ver app.js)

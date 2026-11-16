@@ -1,5 +1,18 @@
 /* Entrenador Académico · Vistas (HTML de cada pestaña) */
 /* ===================== Vistas ===================== */
+function viewLanding(){
+  return `<div class="landing"><div class="landing-bg"></div><div class="landing-panel hud">
+    <div class="hud-head"><span class="hud-mark">◈</span> SISTEMA A.R.V.I.S. · INTERFAZ ACADÉMICA</div>
+    <h1 class="landing-title">Entrenador Académico</h1>
+    <p class="landing-sub">Inicializa tu perfil para personalizar el panel HUD de tu semestre.</p>
+    <div class="hud-form">
+      <label>Identificación / Nombre<input id="reg-name" type="text" maxlength="60" placeholder="Tu nombre"></label>
+      <label>Carrera / Programa<input id="reg-career" type="text" maxlength="80" placeholder="Tu carrera"></label>
+      <button class="btn hud-btn" onclick="registerProfile()">INICIAR SISTEMA</button>
+    </div>
+    <p class="mute hud-note">Los datos se guardan solo en este navegador (localStorage).</p>
+  </div></div>`;
+}
 function consentCard(){
   return `<div class="card"><h3>Antes de empezar: tus datos de bienestar</h3>
     <p style="margin-top:0">El check-in y el diario guardan datos sensibles (energía, ánimo, sueño y notas). Así funcionan:</p>
@@ -124,10 +137,33 @@ function viewSemana(){
     return `<div class="blk" style="top:${top}px;height:${ht}px;background:${ccolor(k.courseId)}">${esc(cname(k.courseId))}<br>${k.start}–${k.end}</div>`}).join('')}</div>`).join('');
   return h+'</div></div></div>'+criticalHtml();
 }
+function gradeSummary(grades){
+  const gs=grades||[];let wsum=0,ws=0;gs.forEach(g=>{const w=+g.weight||0,s=+g.score||0;if(w>0){wsum+=w;ws+=s*w}});
+  const avg=wsum?ws/wsum:null;return {avg,wsum:Math.round(wsum*100)/100,rem:Math.round((100-wsum)*100)/100};
+}
+function gradesCard(c){
+  const gs=c.grades||[],sum=gradeSummary(gs);
+  const rows=gs.map(g=>`<tr><td><input value="${esc(g.name)}" onchange="setGrade('${c.id}','${g.id}','name',this.value)"></td>
+    <td><input type="number" step="0.1" style="width:90px" value="${g.score}" onchange="setGrade('${c.id}','${g.id}','score',this.value)"></td>
+    <td><input type="number" step="1" min="0" max="100" style="width:80px" value="${g.weight}" onchange="setGrade('${c.id}','${g.id}','weight',this.value)">%</td>
+    <td><button class="btn del" onclick="delGrade('${c.id}','${g.id}')">Quitar</button></td></tr>`).join('');
+  return `<div class="card grades-card"><div class="row" style="justify-content:space-between;align-items:flex-start">
+      <div><h3 style="margin:0"><span class="dot" style="background:${c.color};display:inline-block;margin-right:6px"></span>${esc(c.name)}</h3>
+      <div class="mute">Promedio actual (ponderado): <b class="hud-num">${sum.avg!=null?sum.avg.toFixed(2):'—'}</b> · Ponderado: ${sum.wsum}% ${sum.wsum>100?'<span style="color:var(--bad)">(&gt;100%)</span>':''} · Restante: ${Math.max(0,sum.rem)}%</div></div></div>
+    ${gs.length?`<table class="grades-tbl"><tr><th>Evaluación</th><th>Nota</th><th>Pond.</th><th></th></tr>${rows}</table>`:'<div class="mute" style="margin-top:8px">Sin evaluaciones registradas.</div>'}
+    <div class="row" style="margin-top:10px">
+      <input id="gn-${c.id}" placeholder="Evaluación (ej. Certamen 1)">
+      <input id="gs-${c.id}" type="number" step="0.1" placeholder="Nota" style="width:90px">
+      <input id="gw-${c.id}" type="number" step="1" min="0" max="100" placeholder="%" style="width:80px">
+      <button class="btn sec" onclick="addGrade('${c.id}')">Agregar nota</button></div></div>`;
+}
 function viewRamos(){
   const opts=S.courses.map(c=>`<option value="${c.id}" ${c.id===sylCourse?'selected':''}>${esc(c.name)}</option>`).join('');
   const sorted=[...S.events].sort((a,b)=>a.date.localeCompare(b.date));
+  const who=S.profile&&S.profile.name?esc(S.profile.name):'';
+  const career=S.profile&&S.profile.career?` · ${esc(S.profile.career)}`:'';
   return `
+  <div class="card hud-welcome"><b>Perfil:</b> ${who}${career}</div>
   <div class="grid2">
     <div class="card"><h2>Mis ramos</h2>
       ${S.courses.map(c=>{const col=collective(c.name);return `<div class="task"><span class="dot" style="background:${c.color}"></span><b style="flex:1">${esc(c.name)}</b>
@@ -173,6 +209,10 @@ function viewRamos(){
     ${sorted.map(e=>`<div class="task"><span class="dot" style="background:${ccolor(e.courseId)}"></span>
       <span style="flex:1">${dshort(e.date)} · <b>${TYPE_LABEL[e.type]}</b> · ${esc(cname(e.courseId))} — ${esc(e.title)}${e.early?' <span class="tag">margen extra</span>':''}</span>
       <button class="btn del" onclick="delEvent('${e.id}')">Quitar</button></div>`).join('')||'<div class="empty">Sin fechas registradas.</div>'}
+  </div>
+  <div class="card"><h2>Notas y ponderaciones</h2>
+    <p class="mute" style="margin-top:0">Registra evaluaciones por ramo con su nota y ponderación (%). El promedio ponderado se calcula automáticamente y se guarda en este navegador.</p>
+    ${S.courses.length?S.courses.map(gradesCard).join(''):'<div class="empty">Agrega un ramo para registrar sus notas.</div>'}
   </div>
   <div class="card"><h2>Datos de ejemplo</h2><div class="row">
     <button class="btn sec" onclick="loadDemo()">Cargar datos de ejemplo</button>

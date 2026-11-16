@@ -33,14 +33,39 @@ function setMin(){
   if(!(mi>=15)||mi>240)return toast('Pon un mínimo entre 15 y 240 minutos.');
   S.settings.min=mi;replanAll();toast('Mínimo actualizado.');render();
 }
+function registerProfile(){
+  const n=($('#reg-name')||{}).value||'',c=($('#reg-career')||{}).value||'';
+  const name=String(n).trim(),career=String(c).trim();
+  if(!name||!career)return toast('Ingresa tu nombre y carrera.');
+  S.profile={name:name.slice(0,60),career:career.slice(0,80),onboarded:true};
+  save();toast(`Bienvenido/a, ${S.profile.name}.`);render();
+}
 function addCourse(){
   const n=$('#cn').value.trim();if(!n)return;
-  S.courses.push({id:uid(),name:n,difficulty:parseInt($('#cd').value,10),color:COLORS[S.courses.length%COLORS.length]});
+  S.courses.push({id:uid(),name:n,difficulty:parseInt($('#cd').value,10),color:COLORS[S.courses.length%COLORS.length],grades:[]});
   save();render();
 }
 function setDiff(id,v){course(id).difficulty=+v;replanAll();render()}
+function addGrade(cid){
+  const c=course(cid);if(!c)return;
+  const name=(($('#gn-'+cid)||{}).value||'').trim(),score=parseFloat((($('#gs-'+cid)||{}).value||'').replace(',','.')),weight=parseFloat((($('#gw-'+cid)||{}).value||'').replace(',','.'));
+  if(!name)return toast('Ingresa el nombre de la evaluación.');
+  if(!isFinite(score))return toast('Ingresa una nota válida.');
+  if(!isFinite(weight)||weight<0||weight>100)return toast('Ingresa una ponderación entre 0 y 100%.');
+  if(!Array.isArray(c.grades))c.grades=[];
+  c.grades.push({id:uid(),name:name.slice(0,80),score:Math.round(score*100)/100,weight:Math.round(weight*100)/100});
+  save();render();
+}
+function delGrade(cid,gid){const c=course(cid);if(!c)return;c.grades=(c.grades||[]).filter(g=>g.id!==gid);save();render()}
+function setGrade(cid,gid,field,val){
+  const c=course(cid);if(!c)return;const g=(c.grades||[]).find(x=>x.id===gid);if(!g)return;
+  if(field==='name')g.name=String(val).trim().slice(0,80);
+  else if(field==='score'){const n=parseFloat(String(val).replace(',','.'));if(isFinite(n))g.score=Math.round(n*100)/100}
+  else if(field==='weight'){const n=parseFloat(String(val).replace(',','.'));if(isFinite(n)&&n>=0&&n<=100)g.weight=Math.round(n*100)/100}
+  save();render();
+}
 function delCourse(id){
-  if(!confirm('¿Eliminar el ramo con sus clases, fechas y tareas?'))return;
+  if(!confirm('¿Eliminar el ramo con sus clases, fechas, tareas y notas?'))return;
   S.courses=S.courses.filter(c=>c.id!==id);
   ['classes','events','tasks','sessions'].forEach(k=>S[k]=S[k].filter(x=>x.courseId!==id));
   save();render();
@@ -130,11 +155,22 @@ function validState(j){
   if(!j||typeof j!=='object'||Array.isArray(j))return 'no es un respaldo';
   const str=(v,n)=>typeof v==='string'&&v.length<=n,int=(v,a,b)=>Number.isInteger(v)&&v>=a&&v<=b,num=(v,a,b)=>typeof v==='number'&&v>=a&&v<=b;
   for(const k of ['courses','classes','events','tasks','sessions'])if(!Array.isArray(j[k]))return 'falta '+k;
-  for(const c of j.courses)if(!(c&&RX.id.test(c.id)&&str(c.name,120)&&int(c.difficulty,1,5)&&RX.color.test(c.color)))return 'ramos';
+  for(const c of j.courses){
+    if(!(c&&RX.id.test(c.id)&&str(c.name,120)&&int(c.difficulty,1,5)&&RX.color.test(c.color)))return 'ramos';
+    if(c.grades!==undefined){
+      if(!Array.isArray(c.grades))return 'notas';
+      for(const g of c.grades)if(!(g&&RX.id.test(g.id)&&str(g.name,80)&&num(g.score,-100,100)&&num(g.weight,0,100)))return 'notas';
+    }
+  }
   for(const k of j.classes)if(!(k&&RX.id.test(k.id)&&RX.id.test(k.courseId)&&int(k.day,0,6)&&RX.time.test(k.start)&&RX.time.test(k.end)))return 'horario';
   for(const e of j.events)if(!(e&&RX.id.test(e.id)&&RX.id.test(e.courseId)&&str(e.title,200)&&RX.date.test(e.date)&&Object.prototype.hasOwnProperty.call(TYPE_LABEL,e.type)))return 'fechas';
   for(const t of j.tasks)if(!(t&&RX.id.test(t.id)&&RX.id.test(t.eventId)&&RX.id.test(t.courseId)&&str(t.title,300)&&RX.date.test(t.date)&&num(t.minutes,1,600)&&typeof t.done==='boolean'))return 'tareas';
   for(const s of j.sessions)if(!(s&&RX.id.test(s.id)&&RX.id.test(s.courseId)&&RX.date.test(s.date)&&num(s.minutes,1,1440)&&(s.taskId===undefined||RX.id.test(s.taskId))))return 'sesiones';
+  if(j.profile!==undefined){
+    if(!j.profile||typeof j.profile!=='object'||Array.isArray(j.profile))return 'perfil';
+    if(j.profile.name!==undefined&&!str(j.profile.name,60))return 'perfil';
+    if(j.profile.career!==undefined&&!str(j.profile.career,80))return 'perfil';
+  }
   const dia=j.wellbeing&&j.wellbeing.diary;
   if(dia!==undefined){
     if(!Array.isArray(dia))return 'diario';
@@ -148,13 +184,15 @@ function validState(j){
 }
 function cleanState(j){
   const c=fresh();
-  ['courses','classes','events','tasks','sessions'].forEach(k=>c[k]=j[k]);
+  ['classes','events','tasks','sessions'].forEach(k=>c[k]=j[k]);
+  c.courses=(j.courses||[]).map(x=>({id:x.id,name:x.name,difficulty:x.difficulty,color:x.color,grades:(x.grades||[]).map(g=>({id:g.id,name:String(g.name||'').slice(0,80),score:+g.score,weight:+g.weight}))}));
   c.ratings=j.ratings||[];
   c.settings={min:int15(j.settings&&j.settings.min)?j.settings.min:60};
   c.wellbeing={diary:((j.wellbeing&&j.wellbeing.diary)||[]).map(e=>({date:e.date,mood:e.mood??null,energy:e.energy??null,sleep:e.sleep??null,tags:e.tags||[],note:e.note||'',ts:Number(e.ts)||0}))};
   c.support={name:String((j.support&&j.support.name)||'').slice(0,120),contact:String((j.support&&j.support.contact)||'').slice(0,300)};
   c.consent=j.consent&&typeof j.consent.health==='boolean'?{health:j.consent.health,at:today()}:null;
   c.lastBackup=typeof j.lastBackup==='string'&&RX.date.test(j.lastBackup)?j.lastBackup:null;
+  if(j.profile&&typeof j.profile==='object')c.profile={name:String(j.profile.name||'').slice(0,60),career:String(j.profile.career||'').slice(0,80),onboarded:!!j.profile.onboarded||(!!j.profile.name)};
   return c;
 }
 const int15=v=>Number.isInteger(v)&&v>=15&&v<=240;

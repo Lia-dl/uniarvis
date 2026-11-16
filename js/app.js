@@ -2,7 +2,11 @@
 /* ===================== Render ===================== */
 const TABS=[['hoy','Hoy'],['semana','Semana'],['ramos','Ramos'],['bienestar','Bienestar'],['apoyo','Apoyo'],['salud','Mapa de calor'],['datos','Datos de ramos']];
 function render(){
-  if(LOCKED){$('#nav').innerHTML='';$('#app').innerHTML=lockView();const lp=$('#lp');if(lp)try{lp.focus()}catch(e){}return}
+  if(LOCKED){document.body.classList.remove('landing-active');$('#nav').innerHTML='';$('#app').innerHTML=lockView();const lp=$('#lp');if(lp)try{lp.focus()}catch(e){}return}
+  if(!S.profile||!S.profile.onboarded){document.body.classList.add('landing-active');$('#nav').innerHTML='';$('#app').innerHTML=viewLanding();const n=$('#reg-name');if(n)try{n.focus()}catch(e){}return}
+  document.body.classList.remove('landing-active');
+  const who=S.profile&&S.profile.name?`<span class="hud-user"> · ${esc(S.profile.name)}</span>`:'';
+  const brand=document.querySelector('.brand');if(brand)brand.innerHTML='Entrenador Académico'+who;
   $('#nav').innerHTML=TABS.map(([k,v])=>`<button class="${k===tab?'on':''}" onclick="go('${k}')">${v}</button>`).join('');
   const app=$('#app');
   app.innerHTML={hoy:viewHoy,semana:viewSemana,ramos:viewRamos,bienestar:viewBienestar,apoyo:viewApoyo,salud:viewSalud,datos:viewDatos}[tab]();
