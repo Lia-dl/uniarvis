@@ -1,6 +1,6 @@
 /* Entrenador Académico · Render principal y arranque */
 /* ===================== Render ===================== */
-const TABS=[['hoy','Hoy'],['semana','Semana'],['ramos','Ramos y syllabus'],['bienestar','Bienestar'],['apoyo','Apoyo'],['salud','Mapa de calor'],['datos','Datos de ramos']];
+const TABS=[['hoy','Hoy'],['semana','Semana'],['ramos','Ramos'],['bienestar','Bienestar'],['apoyo','Apoyo'],['salud','Mapa de calor'],['datos','Datos de ramos']];
 function render(){
   if(LOCKED){$('#nav').innerHTML='';$('#app').innerHTML=lockView();const lp=$('#lp');if(lp)try{lp.focus()}catch(e){}return}
   $('#nav').innerHTML=TABS.map(([k,v])=>`<button class="${k===tab?'on':''}" onclick="go('${k}')">${v}</button>`).join('');
