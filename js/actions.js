@@ -33,6 +33,14 @@ function setMin(){
   if(!(mi>=15)||mi>240)return toast('Pon un mínimo entre 15 y 240 minutos.');
   S.settings.min=mi;replanAll();toast('Mínimo actualizado.');render();
 }
+function setTheme(id){
+  if(!themeOk(id))return;
+  S.settings.theme=id;save();render();
+}
+function setMode(id){
+  if(!modeOk(id))return;
+  S.settings.mode=id;save();render();
+}
 function registerProfile(){
   const n=($('#reg-name')||{}).value||'',c=($('#reg-career')||{}).value||'';
   const name=String(n).trim(),career=String(c).trim();
@@ -187,7 +195,7 @@ function cleanState(j){
   ['classes','events','tasks','sessions'].forEach(k=>c[k]=j[k]);
   c.courses=(j.courses||[]).map(x=>({id:x.id,name:x.name,difficulty:x.difficulty,color:x.color,grades:(x.grades||[]).map(g=>({id:g.id,name:String(g.name||'').slice(0,80),score:+g.score,weight:+g.weight}))}));
   c.ratings=j.ratings||[];
-  c.settings={min:int15(j.settings&&j.settings.min)?j.settings.min:60};
+  c.settings={min:int15(j.settings&&j.settings.min)?j.settings.min:60,theme:themeOk(j.settings&&j.settings.theme)?j.settings.theme:'cian',mode:modeOk(j.settings&&j.settings.mode)?j.settings.mode:'dark'};
   c.wellbeing={diary:((j.wellbeing&&j.wellbeing.diary)||[]).map(e=>({date:e.date,mood:e.mood??null,energy:e.energy??null,sleep:e.sleep??null,tags:e.tags||[],note:e.note||'',ts:Number(e.ts)||0}))};
   c.support={name:String((j.support&&j.support.name)||'').slice(0,120),contact:String((j.support&&j.support.contact)||'').slice(0,300)};
   c.consent=j.consent&&typeof j.consent.health==='boolean'?{health:j.consent.health,at:today()}:null;

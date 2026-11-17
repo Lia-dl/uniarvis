@@ -12,8 +12,20 @@ const fs=require('fs');
   p.on('pageerror',e=>errs.push('pageerror: '+e.message));
   p.on('console',m=>{if(m.type()==='error')errs.push('console: '+m.text())});
   p.on('dialog',d=>d.accept());
+  const onboard=async()=>{
+    if(await p.locator('#reg-name').count()){
+      await p.fill('#reg-name','Estudiante');
+      await p.fill('#reg-career','Carrera');
+      await p.click('text=INICIAR SISTEMA');
+    }
+  };
+  const acceptConsent=async()=>{
+    const b=p.locator('text=Acepto y quiero usar el check-in');
+    if(await b.count())await b.click();
+  };
   await p.goto(base);
-  await p.click('text=Acepto y quiero usar el check-in');
+  await onboard();
+  await acceptConsent();
 
   // --- PWA ---
   await p.evaluate(()=>navigator.serviceWorker.ready);
@@ -28,7 +40,8 @@ const fs=require('fs');
   await ctx.setOffline(false);
 
   // --- datos de ejemplo + ICS ---
-  await p.click('nav >> text=Ramos y syllabus');await p.click('text=Cargar datos de ejemplo');
+  await p.click('nav >> text="Ramos"');await p.click('text=Cargar datos de ejemplo');
+  await onboard();
   const nEv=await p.evaluate(()=>S.events.length);
   const [dl]=await Promise.all([p.waitForEvent('download'),p.click('text=Exportar a calendario (.ics)')]);
   const ics=fs.readFileSync(await dl.path(),'utf8'),lines=ics.split('\r\n');
@@ -45,6 +58,7 @@ const fs=require('fs');
   const lb=await p.evaluate(()=>S.lastBackup);ok('se registra la fecha del último respaldo',/^\d{4}-\d{2}-\d{2}$/.test(lb),lb);
   await p.evaluate(()=>{S=fresh();save();render()});
   ok('estado vaciado antes de restaurar',await p.evaluate(()=>S.courses.length===0));
+  await onboard();
   await p.setInputFiles('input[onchange="importData(this)"]',bkPath);await p.waitForTimeout(400);
   const rs=await p.evaluate(()=>({c:S.courses.length,e:S.events.length,d:S.wellbeing.diary.length,t:S.tasks.length}));
   ok('restaurar respaldo recupera todo',rs.c===4&&rs.e===nEv&&rs.d>0&&rs.t>0,JSON.stringify(rs));
@@ -57,7 +71,7 @@ const fs=require('fs');
   const evil2=JSON.parse(JSON.stringify(bj));evil2.courses[0].name='<img src=x onerror="window.__pwn=1">';evil2.adapt={n:'<img src=x onerror="window.__pwn=1">',date:'2099-01-01'};
   fs.writeFileSync(tmp+'/malo2.json',JSON.stringify(evil2));
   await p.setInputFiles('input[onchange="importData(this)"]',tmp+'/malo2.json');await p.waitForTimeout(400);
-  await p.click('nav >> text=Hoy');await p.click('nav >> text=Ramos y syllabus');await p.waitForTimeout(300);
+  await p.click('nav >> text="Hoy"');await p.click('nav >> text="Ramos"');await p.waitForTimeout(300);
   ok('nombres con HTML se muestran como texto (sin ejecutar nada)',await p.evaluate(()=>!window.__pwn&&!document.querySelector('#app img')&&S.adapt===null));
   fs.writeFileSync(tmp+'/malo3.json','{"hola":1}');
   await p.click('nav >> text=Apoyo');
@@ -75,7 +89,7 @@ const fs=require('fs');
   const pp=await ctx.newPage();
   await pp.setContent('<html><body style="font:16px sans-serif"><p>Calendario de evaluaciones</p><p>Certamen 1: 12 de noviembre</p><p>Entrega informe 20/12/2026</p><p>Control 2 - 5-12-2026</p></body></html>');
   fs.writeFileSync(tmp+'/syllabus.pdf',await pp.pdf({format:'A4'}));await pp.close();
-  await p.click('nav >> text=Ramos y syllabus');
+  await p.click('nav >> text="Ramos"');
   await p.setInputFiles('input[type=file][accept*=".pdf"]',tmp+'/syllabus.pdf');
   await p.waitForFunction(()=>sylText&&sylText.length>20,null,{timeout:15000}).catch(()=>{});
   await p.evaluate(()=>{sylCourse=S.courses[0].id;analyze()});

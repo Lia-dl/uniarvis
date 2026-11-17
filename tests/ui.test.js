@@ -11,17 +11,46 @@ const fs=require('fs');
   p.on('pageerror',e=>errs.push('pageerror: '+e.message));
   p.on('console',m=>{if(m.type()==='error')errs.push('console: '+m.text())});
   p.on('dialog',d=>d.accept());
+  const onboard=async()=>{
+    if(await p.locator('#reg-name').count()){
+      await p.fill('#reg-name','Estudiante');
+      await p.fill('#reg-career','Carrera');
+      await p.click('text=INICIAR SISTEMA');
+    }
+  };
+  const acceptConsent=async()=>{
+    const b=p.locator('text=Acepto y quiero usar el check-in');
+    if(await b.count())await b.click();
+  };
   await p.goto('file://'+file);
 
-  // 1. Primera pantalla: consentimiento explícito
+  // 1. Primera pantalla: registro de perfil y consentimiento explícito
   let t=await p.textContent('#app');
-  ok('primera vez muestra el consentimiento',t.includes('Antes de empezar'));
-  await p.click('text=Acepto y quiero usar el check-in');
+  ok('primera vez muestra el inicio de perfil',t.includes('Inicializa tu perfil'));
+  await onboard();
+  t=await p.textContent('#app');
+  ok('tras el perfil aparece el consentimiento',t.includes('Antes de empezar'));
+  await acceptConsent();
+
+  // 1b. Panel de apariencia: color y modo claro/oscuro
+  await p.click('nav >> text="Apariencia"');
+  ok('el panel ofrece 8 colores y 2 modos',await p.locator('.swatch').count()===8&&await p.locator('.mode-btn').count()===2);
+  await p.locator('.swatch').filter({hasText:'Morado'}).click();
+  await p.locator('.mode-btn').filter({hasText:'Claro'}).click();
+  const th=await p.evaluate(()=>({accent:document.documentElement.getAttribute('data-accent'),mode:document.documentElement.getAttribute('data-mode'),theme:S.settings.theme,modeS:S.settings.mode}));
+  ok('el panel aplica color y modo',th.accent==='morado'&&th.mode==='light'&&th.theme==='morado'&&th.modeS==='light',JSON.stringify(th));
+  await p.reload();
+  await p.click('nav >> text="Apariencia"');
+  const th2=await p.evaluate(()=>({accent:document.documentElement.getAttribute('data-accent'),mode:document.documentElement.getAttribute('data-mode')}));
+  ok('el tema se conserva al recargar',th2.accent==='morado'&&th2.mode==='light',JSON.stringify(th2));
+  await p.locator('.swatch').filter({hasText:'Cian'}).click();
+  await p.locator('.mode-btn').filter({hasText:'Oscuro'}).click();
 
   // 2. Datos de ejemplo
-  await p.click('nav >> text=Ramos y syllabus');
+  await p.click('nav >> text="Ramos"');
   await p.click('text=Cargar datos de ejemplo');
-  await p.click('nav >> text=Hoy');
+  await onboard();
+  await p.click('nav >> text="Hoy"');
   const base=await p.evaluate(()=>({tasks:S.tasks.length,sizes:[...new Set(S.tasks.map(t=>t.minutes))].sort((a,b)=>a-b),
     cap:capFor(today()),min:minFor(today())}));
   ok('plan generado con micro-tareas',base.tasks>20,JSON.stringify(base));
@@ -130,15 +159,17 @@ const fs=require('fs');
 
   // 13. Todas las pestañas renderizan sin errores
   await p.evaluate(()=>{S=fresh();save()});await p.reload();
-  await p.click('text=Acepto y quiero usar el check-in');
-  await p.click('nav >> text=Ramos y syllabus');await p.click('text=Cargar datos de ejemplo');
-  for(const [k,label] of [['hoy','Hoy'],['semana','Semana'],['ramos','Ramos y syllabus'],['bienestar','Bienestar'],['apoyo','Apoyo'],['salud','Mapa de calor'],['datos','Datos de ramos']]){
+  await onboard();
+  await acceptConsent();
+  await p.click('nav >> text="Ramos"');await p.click('text=Cargar datos de ejemplo');
+  await onboard();
+  for(const [k,label] of [['hoy','Hoy'],['semana','Semana'],['ramos','Ramos'],['bienestar','Bienestar'],['apoyo','Apoyo'],['salud','Mapa de calor'],['datos','Datos de ramos'],['tema','Apariencia']]){
     await p.click('nav >> text="'+label+'"');
     const len=(await p.textContent('#app')).length;ok('pestaña '+label+' renderiza',len>200,len+' caracteres');
     await p.screenshot({path:shots+'/tab-'+k+'.png',fullPage:true});
   }
   // 14. Móvil
-  await p.setViewportSize({width:390,height:800});await p.click('nav >> text=Hoy');
+  await p.setViewportSize({width:390,height:800});await p.click('nav >> text="Hoy"');
   const sw=await p.evaluate(()=>document.documentElement.scrollWidth);
   ok('sin scroll horizontal en móvil (390px)',sw<=392,'ancho '+sw);
   await p.screenshot({path:shots+'/mobile-hoy.png',fullPage:false});

@@ -1,12 +1,15 @@
 /* Entrenador Académico · Estado de la app y persistencia local */
 /* ===================== Estado y persistencia (solo en este navegador) ===================== */
 const KEY='entrenador-academico-v1';
-const fresh=()=>({courses:[],classes:[],events:[],tasks:[],sessions:[],ratings:[],settings:{min:60},lastPlan:null,
+const fresh=()=>({courses:[],classes:[],events:[],tasks:[],sessions:[],ratings:[],settings:{min:60,theme:'cian',mode:'dark'},lastPlan:null,
   wellbeing:{diary:[]},createdAt:today(),lastBackup:null,backupSnooze:null,consent:null,soft:null,adapt:null,moved:null,dismissed:{},support:{name:'',contact:''},profile:{name:'',career:'',onboarded:false}});
 function migrate(s){
   const f=fresh();for(const k in f)if(s[k]===undefined)s[k]=f[k];
   if(!s.wellbeing||!Array.isArray(s.wellbeing.diary))s.wellbeing={diary:[]};
-  if(!s.settings||!s.settings.min)s.settings={min:60};
+  if(!s.settings||typeof s.settings!=='object')s.settings={};
+  if(!s.settings.min)s.settings.min=60;
+  if(!themeOk(s.settings.theme))s.settings.theme='cian';
+  if(!modeOk(s.settings.mode))s.settings.mode='dark';
   delete s.settings.max;                          // la capacidad máxima ahora se calcula cada día
   delete s.reviews;                               // reseñas de texto libre de versiones anteriores: ya no se guardan
   if(s.wellbeing)delete s.wellbeing.practices;

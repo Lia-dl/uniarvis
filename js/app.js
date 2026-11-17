@@ -1,7 +1,8 @@
 /* Entrenador Académico · Render principal y arranque */
 /* ===================== Render ===================== */
-const TABS=[['hoy','Hoy'],['semana','Semana'],['ramos','Ramos'],['bienestar','Bienestar'],['apoyo','Apoyo'],['salud','Mapa de calor'],['datos','Datos de ramos']];
+const TABS=[['hoy','Hoy'],['semana','Semana'],['ramos','Ramos'],['bienestar','Bienestar'],['apoyo','Apoyo'],['salud','Mapa de calor'],['datos','Datos de ramos'],['tema','Apariencia']];
 function render(){
+  applyTheme();
   if(LOCKED){document.body.classList.remove('landing-active');$('#nav').innerHTML='';$('#app').innerHTML=lockView();const lp=$('#lp');if(lp)try{lp.focus()}catch(e){}return}
   if(!S.profile||!S.profile.onboarded){document.body.classList.add('landing-active');$('#nav').innerHTML='';$('#app').innerHTML=viewLanding();const n=$('#reg-name');if(n)try{n.focus()}catch(e){}return}
   document.body.classList.remove('landing-active');
@@ -9,7 +10,7 @@ function render(){
   const brand=document.querySelector('.brand');if(brand)brand.innerHTML='Entrenador Académico'+who;
   $('#nav').innerHTML=TABS.map(([k,v])=>`<button class="${k===tab?'on':''}" onclick="go('${k}')">${v}</button>`).join('');
   const app=$('#app');
-  app.innerHTML={hoy:viewHoy,semana:viewSemana,ramos:viewRamos,bienestar:viewBienestar,apoyo:viewApoyo,salud:viewSalud,datos:viewDatos}[tab]();
+  app.innerHTML={hoy:viewHoy,semana:viewSemana,ramos:viewRamos,bienestar:viewBienestar,apoyo:viewApoyo,salud:viewSalud,datos:viewDatos,tema:viewTema}[tab]();
   app.style.animation='none';void app.offsetWidth;app.style.animation='';
 }
 function start(){loadDraft();if(S.lastPlan!==today()&&S.courses.length)replanAll();render()}

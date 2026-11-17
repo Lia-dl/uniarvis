@@ -371,3 +371,26 @@ function viewDatos(){
     </div>
   </div>`;
 }
+function viewTema(){
+  const th=themeOk(S.settings&&S.settings.theme)?S.settings.theme:'cian';
+  const md=modeOk(S.settings&&S.settings.mode)?S.settings.mode:'dark';
+  return `
+  <div class="card"><h2>Apariencia</h2>
+    <p style="margin-top:0">Escoge el color de la aplicación y el modo de luz. La elección se guarda solo en este navegador.</p>
+    <h3>Color de la aplicación</h3>
+    <div class="swatches">${THEMES.map(([k,label,hex])=>`<button type="button" class="swatch ${k===th?'on':''}" style="--sw:${hex}" aria-pressed="${k===th}" onclick="setTheme('${k}')"><span class="swatch-dot"></span><span>${label}</span></button>`).join('')}</div>
+    <h3 style="margin-top:20px">Modo</h3>
+    <div class="modes">${MODES.map(([k,label])=>`<button type="button" class="mode-btn ${k===md?'on':''}" aria-pressed="${k===md}" onclick="setMode('${k}')"><span class="mode-preview ${k}"></span><span>${label}</span></button>`).join('')}</div>
+    <p class="mute" style="margin-bottom:0">El modo claro suaviza los fondos y mantiene el contraste para leer; el oscuro cuida la vista con poca luz.</p>
+  </div>
+  <div class="card"><h3>Vista previa</h3>
+    <div class="preview">
+      <div class="preview-head"><span class="dot" style="background:var(--accent)"></span><b>Entrenador Académico</b></div>
+      <div class="preview-body">
+        <div class="row"><span class="tag">Etiqueta</span><span class="tag sel on" style="cursor:default">Seleccionado</span></div>
+        <div class="row" style="margin-top:12px"><button class="btn" style="cursor:default">Botón principal</button><button class="btn sec" style="cursor:default">Secundario</button></div>
+        <div class="preview-line"></div>
+      </div>
+    </div>
+  </div>`;
+}

@@ -7,6 +7,14 @@
 <meta name="theme-color" content="#050b14">
 <meta name="description" content="Organiza tu semestre según tu energía real: plan adaptativo, límite diario y apoyo.">
 <link rel="manifest" href="manifest.webmanifest">
+<script>
+try{
+  var s=JSON.parse(localStorage.getItem('entrenador-academico-v1')||'{}');
+  var c=s&&s.settings&&s.settings.theme,m=s&&s.settings&&s.settings.mode;
+  document.documentElement.setAttribute('data-accent',/^(cian|rosa|celeste|azul|verde|naranjo|morado|amarillo)$/.test(c)?c:'cian');
+  document.documentElement.setAttribute('data-mode',m==='light'?'light':'dark');
+}catch(e){}
+</script>
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="css/styles.css">

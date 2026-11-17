@@ -13,9 +13,22 @@ const fs=require('fs');
   p.on('dialog',d=>d.accept());
   const raw=()=>p.evaluate(()=>localStorage.getItem('entrenador-academico-v1'));
   const unlock=async pw=>{await p.fill('#lp',pw);await p.click('text=Desbloquear');await p.waitForTimeout(900)};
+  const onboard=async()=>{
+    if(await p.locator('#reg-name').count()){
+      await p.fill('#reg-name','Estudiante');
+      await p.fill('#reg-career','Carrera');
+      await p.click('text=INICIAR SISTEMA');
+    }
+  };
+  const acceptConsent=async()=>{
+    const b=p.locator('text=Acepto y quiero usar el check-in');
+    if(await b.count())await b.click();
+  };
   await p.goto(base);
-  await p.click('text=Acepto y quiero usar el check-in');
-  await p.click('nav >> text=Ramos y syllabus');await p.click('text=Cargar datos de ejemplo');
+  await onboard();
+  await acceptConsent();
+  await p.click('nav >> text="Ramos"');await p.click('text=Cargar datos de ejemplo');
+  await onboard();
   const before=await p.evaluate(()=>({c:S.courses.length,d:S.wellbeing.diary.length,s:S.sessions.length}));
   ok('hay un modo de cifrado disponible',await p.evaluate(()=>CRYPTO_OK));
 
@@ -39,11 +52,11 @@ const fs=require('fs');
   ok('contraseña correcta abre y recupera todo',!after.locked&&after.c===before.c&&after.d===before.d&&after.s===before.s,JSON.stringify(after));
 
   // los cambios siguen cifrados y persisten
-  await p.evaluate(()=>{S.sessions.push({id:'zz1',date:today(),courseId:S.courses[0].id,minutes:25});save()});
+  await p.evaluate(()=>{S.sessions.push({id:'zz1-marcador-plano',date:today(),courseId:S.courses[0].id,minutes:25});save()});
   await p.waitForTimeout(700);r=await raw();
-  ok('los cambios nuevos también se guardan cifrados',r.includes('"enc":1')&&!r.includes('zz1'));
+  ok('los cambios nuevos también se guardan cifrados',r.includes('"enc":1')&&!r.includes('marcador-plano'));
   await p.reload();await unlock('clave-segura-123');
-  ok('los cambios persisten tras reabrir',await p.evaluate(()=>S.sessions.some(s=>s.id==='zz1')));
+  ok('los cambios persisten tras reabrir',await p.evaluate(()=>S.sessions.some(s=>s.id==='zz1-marcador-plano')));
 
   // respaldo cifrado
   await p.click('nav >> text=Apoyo');
@@ -68,14 +81,15 @@ const fs=require('fs');
   await p.setInputFiles('input[onchange="importData(this)"]',bk);await p.waitForTimeout(1200);
   ok('restaurar respaldo cifrado pide la contraseña',await p.evaluate(()=>!!LOCKED));
   await unlock('clave-segura-123');
-  ok('el respaldo cifrado se abre con su contraseña original',await p.evaluate(()=>!LOCKED&&S.courses.length===4&&S.sessions.some(s=>s.id==='zz1')));
+  ok('el respaldo cifrado se abre con su contraseña original',await p.evaluate(()=>!LOCKED&&S.courses.length===4&&S.sessions.some(s=>s.id==='zz1-marcador-plano')));
 
   // olvidé la contraseña
   await p.reload();await p.click('text=¿Olvidaste la contraseña?');await p.click('text=Borrar los datos cifrados de este navegador');await p.waitForTimeout(500);
   ok('"olvidé la contraseña" borra lo cifrado y deja la app limpia',await p.evaluate(()=>!LOCKED&&S.courses.length===0)&&(await raw())===null||(await raw())&&!(await raw()).includes('"enc"'));
 
   // borrar todo desactiva el cifrado
-  await p.click('text=Acepto y quiero usar el check-in').catch(()=>{});
+  await onboard();
+  await acceptConsent();
   await p.click('nav >> text=Apoyo');await p.fill('#np1','clave-segura-123');await p.fill('#np2','clave-segura-123');await p.click('text=Activar cifrado');await p.waitForTimeout(800);
   await p.click('text=Borrar todo');await p.waitForTimeout(700);r=await raw();
   ok('"Borrar todo" también desactiva el cifrado',!!r&&!r.includes('"enc"')&&await p.evaluate(()=>!KEYOBJ));
