@@ -5,6 +5,7 @@ const fs=require('fs');
   const base=process.argv[2],tmp=process.argv[3];fs.mkdirSync(tmp,{recursive:true});
   const b=await chromium.launch();
   const ctx=await b.newContext({viewport:{width:1100,height:900},acceptDownloads:true});
+  await ctx.addInitScript(()=>{try{localStorage.setItem('entrenador-academico-tour-seen-v1','1')}catch(e){}});
   const p=await ctx.newPage();
   const res=[],errs=[];
   const ok=(n,c,x='')=>res.push((c?'OK   ':'FALLA')+' '+n+(x?'  → '+x:''));
@@ -20,10 +21,6 @@ const fs=require('fs');
       await p.locator('.hud-btn').click();
     }
   };
-  const acceptConsent=async()=>{
-    const b=p.locator('text=Acepto y quiero usar el check-in');
-    if(await b.count())await b.click();
-  };
   const open=async(sec,sub)=>{
     await p.locator('.brand').click();
     if(sec!=='Inicio')await p.locator('.home-card').filter({hasText:sec}).click();
@@ -37,7 +34,6 @@ const fs=require('fs');
   const confirmClick=async(sel,word)=>{await p.click(sel);await confirmOk(word)};
   await p.goto(base);
   await onboard();
-  await acceptConsent();
   await open('Ajustes','Datos de ejemplo');await p.click('text=Cargar datos de ejemplo');
   await onboard();
   const before=await p.evaluate(()=>({c:S.courses.length,d:S.wellbeing.diary.length,s:S.sessions.length}));
@@ -106,7 +102,6 @@ const fs=require('fs');
 
   // borrar todo desactiva el cifrado
   await onboard();
-  await acceptConsent();
   await open('Ajustes','Privacidad');await p.fill('#np1','clave-segura-123');await p.fill('#np2','clave-segura-123');await confirmClick('text=Activar cifrado');
   await p.waitForFunction(()=>{const r=localStorage.getItem('entrenador-academico-v1');return !!r&&JSON.parse(r).enc===1});
   await confirmClick('text=Borrar todo','BORRAR');await p.waitForTimeout(700);r=await raw();

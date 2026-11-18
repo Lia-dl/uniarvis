@@ -24,6 +24,7 @@ const fs=require('fs');
   };
 
   const ctx=await b.newContext({serviceWorkers:'block'});
+  await ctx.addInitScript(()=>{try{localStorage.setItem('entrenador-academico-tour-seen-v1','1')}catch(e){}});
   await ctx.route('**/js/config.js',r=>r.fulfill({contentType:'text/javascript',
     body:"const SUPABASE_URL='';const SUPABASE_ANON_KEY='';"}));
   const p=await ctx.newPage();

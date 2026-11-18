@@ -10,7 +10,7 @@ const TOUR_STEPS=[
   {
     icon:'📚',
     title:'Académico',
-    text:'Gestiona tus ramos y horario, carga tu syllabus, registra fechas y notas, y revisa tu mapa de calor y datos de ramos.'
+    text:'Gestiona tus ramos y horario, carga tu syllabus, registra fechas y notas, y revisa tu mapa de calor.'
   },
   {
     icon:'🗓️',
@@ -39,7 +39,7 @@ const AYUDA={
     title:'Inicio',
     desc:'Punto de entrada para acceder rápidamente a las secciones principales de Uarvis y ver avisos importantes.',
     steps:[
-      'Elige una sección (Académico, Planificación, Bienestar, Social o Ajustes).',
+      'Elige una sección (Bienestar, Académico, Planificación, Social o Ajustes).',
       'Revisa los avisos o recordatorios que aparezcan en la parte superior.',
       'Usa esta pantalla para orientarte y decidir por dónde empezar hoy.'
     ]
@@ -48,7 +48,7 @@ const AYUDA={
     title:'Hoy',
     desc:'Muestra tu plan del día ajustado a tu capacidad, tu mínimo viable y el avance de tus micro-tareas.',
     steps:[
-      'Completa o revisa tu check-in para ajustar la capacidad del día.',
+      'Revisa la capacidad del día, que puedes ajustar con el check-in en Bienestar.',
       'Marca las micro-tareas realizadas y registra estudio libre si corresponde.',
       'Revisa tu mínimo, tu capacidad y las sugerencias o pausas del día.'
     ]
@@ -98,15 +98,6 @@ const AYUDA={
       'Úsalo como guía para reequilibrar tu estudio, no como una nota.'
     ]
   },
-  datos:{
-    title:'Datos de ramos',
-    desc:'Aporta y consulta datos anónimos y agregados sobre carga, dificultad y tipo de evaluación de los ramos.',
-    steps:[
-      'Elige un ramo y aporta carga, dificultad, tipo de evaluación y horas.',
-      'Revisa los promedios colectivos cuando haya suficientes aportes.',
-      'Exporta o importa aportes si quieres compartirlos o combinarlos.'
-    ]
-  },
   checkin:{
     title:'Check-in',
     desc:'Registra tu energía, ánimo y sueño para ajustar tu plan y ver patrones de bienestar en el tiempo.',
@@ -120,9 +111,9 @@ const AYUDA={
     title:'Respiración y meditaciones',
     desc:'Herramientas breves de respiración guiada y meditaciones con temporizador para hacer una pausa consciente.',
     steps:[
-      'Elige una técnica de respiración y presiona "Comenzar".',
+      'Comienza con la exhalación larga (4-6), que es la técnica visible por defecto.',
       'Sigue las indicaciones del círculo y los tiempos en pantalla.',
-      'Inicia una meditación breve cuando quieras bajar la activación.'
+      'Abre "Más opciones" para otras respiraciones o para iniciar una meditación breve.'
     ]
   },
   pausas:{

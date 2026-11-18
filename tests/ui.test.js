@@ -39,17 +39,24 @@ const fs=require('fs');
     if(word)await p.fill('#confirm-word',word);
     await p.click('#confirm-ok');await d.waitFor({state:'hidden'});
   };
+  await p.addInitScript(()=>{try{localStorage.setItem('entrenador-academico-tour-seen-v1','1')}catch(e){}});
   await p.goto('file://'+file);
 
-  // 1. Primera pantalla: registro de perfil y consentimiento explícito
+  // 1. Primera pantalla: registro de perfil y app completa sin pedir consentimiento
   let t=await p.textContent('#app');
   ok('primera vez muestra el inicio de perfil',t.includes('Bienvenido/a')||t.includes('Inicializa tu perfil'));
   const st0=await p.evaluate(()=>({style:S.settings.style,attr:document.documentElement.getAttribute('data-style')}));
   ok('estilo Calma predeterminado para perfiles nuevos',st0.style==='calma'&&st0.attr==='calma',JSON.stringify(st0));
   await onboard();
   t=await p.textContent('#app');
-  ok('tras el perfil aparece el consentimiento',t.includes('Antes de empezar'));
+  ok('tras el perfil la app se muestra sin pedir consentimiento',!t.includes('Antes de empezar')&&t.includes('Elige por dónde empezar hoy'));
+  const orden=await p.evaluate(()=>[...document.querySelectorAll('.home-card .home-copy b')].map(x=>x.textContent));
+  ok('inicio ordena Bienestar, Académico, Planificación, Social y Ajustes',orden.join(',')==='Bienestar,Académico,Planificación,Social,Ajustes',orden.join(','));
+  await open('Bienestar','Check-in');
+  ok('el consentimiento aparece al abrir el check-in en Bienestar',(await p.textContent('#app')).includes('Antes de empezar'));
   await acceptConsent();
+  await open('Planificación','Hoy');
+  ok('el check-in no aparece en Hoy',await p.locator('.ci-row').count()===0);
   const ml=await p.evaluate(()=>({mode:S.settings.mode,attr:document.documentElement.getAttribute('data-mode')}));
   ok('modo claro por defecto',ml.mode==='light'&&ml.attr==='light',JSON.stringify(ml));
 
@@ -139,10 +146,12 @@ const fs=require('fs');
   // 4. Check-in con energía baja → solo el mínimo y se mueve el resto
   const before=await p.evaluate(()=>S.tasks.filter(t=>t.date===today()&&!t.done).reduce((a,t)=>a+t.minutes,0));
   const totalBefore=await p.evaluate(()=>S.tasks.filter(t=>!t.done).reduce((a,t)=>a+t.minutes,0));
+  await open('Bienestar','Check-in');
   await p.locator('.ci-row').nth(0).locator('.sc').nth(0).click();
   await p.locator('.ci-row').nth(1).locator('.sc').nth(1).click();
   await p.locator('.ci-row').nth(2).locator('.sc').nth(1).click();
   await p.click('text=Guardar y ajustar mi plan');
+  await p.evaluate(()=>go('hoy'));
   const low=await p.evaluate(()=>({low:lowMode(today()),min:minFor(today()),cap:capFor(today()),
     pend:S.tasks.filter(t=>t.date===today()&&!t.done).reduce((a,t)=>a+t.minutes,0),
     total:S.tasks.filter(t=>!t.done).reduce((a,t)=>a+t.minutes,0)}));
@@ -194,9 +203,19 @@ const fs=require('fs');
   const pi=await p.evaluate(()=>pauseItems().map(x=>x.t));
   ok('pausas antes/después de pruebas',pi.some(x=>x.includes('Hoy'))&&pi.some(x=>x.includes('Mañana')),pi.join(' | '));
 
-  // 10. Respiración guiada arranca y se detiene
+  // 10. Respiración: una sola técnica visible por defecto y las pausas abren la correcta
+  await p.evaluate(()=>{stopBreath(true);stopMed(true);bsel='larga';go('respiracion')});
+  const def=await p.evaluate(()=>{
+    const mas=[...document.querySelectorAll('details')].find(d=>d.querySelector('summary')&&d.querySelector('summary').textContent==='Más opciones');
+    return {texto:[...document.querySelectorAll('#app .card')][1].textContent,abierto:!!mas&&mas.open};
+  });
+  ok('solo la exhalación larga visible por defecto',def.texto.includes('Respiración guiada')&&def.texto.includes('Exhalación larga (4-6)')&&!def.abierto,JSON.stringify(def.texto.slice(0,80)));
+  ok('otras técnicas y meditaciones ocultas',!await p.locator('button:has-text("4-7-8")').isVisible()&&!await p.locator('summary:has-text("Escaneo corporal")').isVisible());
+  await p.click('summary:has-text("Más opciones")');
+  ok('Más opciones revela técnicas y meditaciones',await p.locator('button:has-text("4-7-8")').isVisible()&&await p.locator('summary:has-text("Escaneo corporal")').isVisible());
   await p.evaluate(()=>goBreath('caja'));await p.waitForTimeout(1400);
   const bl=await p.textContent('#blabel');ok('respiración guiada en marcha',bl.length>2&&bl!=='Listo cuando quieras',bl);
+  ok('la pausa abre la técnica correcta',await p.evaluate(()=>bsel==='caja')&&bl==='Inhala',bl+' / '+await p.evaluate(()=>bsel));
   await p.evaluate(()=>stopBreath());
 
   // 11. Consentimiento: al revocar, el check-in deja de influir en la capacidad
@@ -233,12 +252,13 @@ const fs=require('fs');
   // 12. Migración desde el estado de la versión anterior (con reseñas de texto libre)
   await p.evaluate(()=>{localStorage.setItem('entrenador-academico-v1',JSON.stringify({courses:[{id:'c1',name:'Cálculo',difficulty:3,color:'#3b6df0'}],
     classes:[],events:[],tasks:[],sessions:[],reviews:[{id:'r',courseId:'c1',cat:'cuello',src:'Docente',text:'texto libre',votes:1}],
+    ratings:[{id:'v',course:'Cálculo',load:5,diff:5,evalType:'certamenes',hours:12}],
     settings:{min:90,max:240},lastPlan:null,wellbeing:{diary:[{date:'2026-10-27',mood:2,tags:['Estrés'],note:'hola',ts:1}],practices:[]}}))});
   await p.reload();
-  const mg=await p.evaluate(()=>({reviews:('reviews' in S),consent:S.consent,courses:S.courses.length,min:S.settings.min,mode:S.settings.mode,attr:document.documentElement.getAttribute('data-mode'),style:S.settings.style,styleAttr:document.documentElement.getAttribute('data-style')}));
+  const mg=await p.evaluate(()=>({reviews:('reviews' in S),ratings:('ratings' in S),consent:S.consent,courses:S.courses.length,min:S.settings.min,mode:S.settings.mode,attr:document.documentElement.getAttribute('data-mode'),style:S.settings.style,styleAttr:document.documentElement.getAttribute('data-style')}));
   ok('migración conserva ramos y mínimo',mg.courses===1&&mg.min===90,JSON.stringify(mg));
-  ok('migración elimina reseñas de texto libre antiguas',!mg.reviews);
-  ok('migración pide consentimiento de nuevo',mg.consent===null);
+  ok('migración elimina reseñas y aportes antiguos',!mg.reviews&&!mg.ratings);
+  ok('migración deja el check-in sin consentir',mg.consent===null);
   ok('migración usa modo claro',mg.mode==='light'&&mg.attr==='light',JSON.stringify(mg));
   ok('migración conserva estilo HUD para perfiles existentes',mg.style==='hud'&&mg.styleAttr==='hud',JSON.stringify(mg));
 
@@ -250,7 +270,7 @@ const fs=require('fs');
   await onboard();
   const screens=[['inicio','Inicio'],['hoy','Planificación','Hoy'],['semana','Planificación','Semana'],
     ['ramos','Académico','Mis ramos y horario'],['syllabus','Académico','Syllabus y fechas'],['notas','Académico','Notas y ponderaciones'],
-    ['salud','Académico','Carga por semana'],['datos','Académico','Datos de ramos'],
+    ['salud','Académico','Carga por semana'],
     ['checkin','Bienestar','Check-in'],['respiracion','Bienestar','Respiración y meditaciones'],['pausas','Bienestar','Pausas rápidas'],['apoyo','Bienestar','Apoyo'],
     ['amigos','Social'],['perfil','Ajustes','Perfil'],['tema','Ajustes','Apariencia'],['privacidad','Ajustes','Privacidad'],['ejemplos','Ajustes','Datos de ejemplo']];
   for(const [k,sec,sub] of screens){

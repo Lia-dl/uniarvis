@@ -1,4 +1,4 @@
-/* U.A.R.V.I.S. · Acciones del usuario, datos anónimos de ramos, privacidad y datos de ejemplo */
+/* U.A.R.V.I.S. · Acciones del usuario, privacidad y datos de ejemplo */
 /* ===================== Acciones ===================== */
 function undoable(msg,mutate,after){
   const snap=JSON.stringify(S);
@@ -116,40 +116,6 @@ function addEvent(){
 }
 function delEvent(id){undoable('Fecha eliminada.',()=>{S.events=S.events.filter(e=>e.id!==id);S.tasks=S.tasks.filter(t=>t.eventId!==id||t.done)},()=>replanAll())}
 
-/* ===================== Datos anónimos y agregados de ramos ===================== */
-const EVAL_TYPES={certamenes:'Certámenes',entregas:'Entregas / proyectos',mixto:'Mixto',controles:'Controles frecuentes'};
-const MIN_N=3;                                   // mínimo de aportes para mostrar un promedio (protege el anonimato)
-function aggRatings(){
-  const g={};
-  S.ratings.forEach(r=>{const k=norm(r.course);(g[k]=g[k]||{name:r.course,items:[]}).items.push(r)});
-  return Object.values(g).map(g=>{
-    const n=g.items.length,a=k=>avg(g.items.map(x=>x[k])),cnt={};
-    g.items.forEach(x=>cnt[x.evalType]=(cnt[x.evalType]||0)+1);
-    return{name:g.name,n,load:a('load'),diff:a('diff'),hours:a('hours'),evalType:Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0][0]};
-  }).sort((a,b)=>a.name.localeCompare(b.name));
-}
-const collective=name=>aggRatings().find(a=>norm(a.name)===norm(name)&&a.n>=MIN_N)||null;
-function addRating(){
-  const cid=$('#rc').value;if(!cid)return toast('Primero agrega tus ramos.');
-  const r={id:uid(),course:cname(cid),load:+$('#rl').value,diff:+$('#rd').value,evalType:$('#rt').value,hours:clamp(parseFloat($('#rh').value)||0,0,40),mine:true};
-  S.ratings=S.ratings.filter(x=>!(x.mine&&norm(x.course)===norm(r.course)));
-  S.ratings.push(r);save();toast('Gracias. Tu aporte es anónimo: solo guarda números.');render();
-}
-function exportRatings(){
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([JSON.stringify(S.ratings.map(({course,load,diff,evalType,hours})=>({course,load,diff,evalType,hours})),null,2)],{type:'application/json'}));
-  a.download='datos-agregados-ramos.json';a.click();
-}
-async function importRatings(inp){
-  const f=inp.files[0];if(!f)return;
-  try{
-    const arr=JSON.parse(await f.text());let n=0;
-    arr.forEach(r=>{if(r&&typeof r.course==='string'&&r.load>=1&&r.load<=5&&r.diff>=1&&r.diff<=5&&EVAL_TYPES[r.evalType]){
-      S.ratings.push({id:uid(),course:r.course.slice(0,80),load:+r.load,diff:+r.diff,evalType:r.evalType,hours:clamp(+r.hours||0,0,40)});n++}});
-    save();toast(`${n} aportes importados.`);render();
-  }catch(e){toast('Ese archivo no tiene el formato esperado.')}
-}
-
 /* ===================== Privacidad y datos ===================== */
 async function wipe(){
   if(!await askConfirm({title:'Borrar todos los datos',text:'Se borrarán todos tus datos de este navegador y se desactivará el cifrado, si lo usabas. Esta acción no se puede deshacer.',okLabel:'Borrar todo',danger:true,requireWord:'BORRAR'}))return;
@@ -216,10 +182,6 @@ function validState(j){
     if(!Array.isArray(dia))return 'diario';
     for(const e of dia)if(!(e&&RX.date.test(e.date)&&[e.mood,e.energy,e.sleep].every(v=>v==null||int(v,1,5))&&(e.tags===undefined||(Array.isArray(e.tags)&&e.tags.every(t=>str(t,40))))&&(e.note===undefined||str(e.note,5000))))return 'diario';
   }
-  if(j.ratings!==undefined){
-    if(!Array.isArray(j.ratings))return 'aportes';
-    for(const r of j.ratings)if(!(r&&str(r.course,80)&&int(r.load,1,5)&&int(r.diff,1,5)&&Object.prototype.hasOwnProperty.call(EVAL_TYPES,r.evalType)&&num(r.hours,0,40)))return 'aportes';
-  }
   return null;
 }
 function cleanState(j){
@@ -228,7 +190,6 @@ function cleanState(j){
   c.events=j.events.map(e=>{const o={id:e.id,courseId:e.courseId,title:String(e.title||'').slice(0,200),date:e.date,type:e.type};if(e.early)o.early=true;if(e.src)o.src={owner:String(e.src.owner).slice(0,40),id:String(e.src.id).slice(0,40)};return o});
   c.sessions=j.sessions.map(s=>{const o={id:s.id,date:s.date,courseId:s.courseId,minutes:+s.minutes};if(s.taskId)o.taskId=s.taskId;if(s.socialId)o.socialId=s.socialId;return o});
   c.courses=(j.courses||[]).map(x=>({id:x.id,name:x.name,difficulty:x.difficulty,color:x.color,share:x.share===true,grades:(x.grades||[]).map(g=>({id:g.id,name:String(g.name||'').slice(0,80),score:+g.score,weight:+g.weight}))}));
-  c.ratings=j.ratings||[];
   c.settings={min:int15(j.settings&&j.settings.min)?j.settings.min:60,theme:themeOk(j.settings&&j.settings.theme)?j.settings.theme:'cian',mode:modeOk(j.settings&&j.settings.mode)?j.settings.mode:'light'};
   c.wellbeing={diary:((j.wellbeing&&j.wellbeing.diary)||[]).map(e=>({date:e.date,mood:e.mood??null,energy:e.energy??null,sleep:e.sleep??null,tags:e.tags||[],note:e.note||'',ts:Number(e.ts)||0}))};
   c.support={name:String((j.support&&j.support.name)||'').slice(0,120),contact:String((j.support&&j.support.contact)||'').slice(0,300)};
@@ -304,11 +265,6 @@ async function loadDemo(){
     S.wellbeing.diary.push({date:d,mood:clamp(Math.round(3.9-(heavy?1.3:0)+r()*1.2),1,5),energy:clamp(Math.round(3.8-(heavy?1:0)+r()*1.2),1,5),
       sleep:clamp(Math.round(3.6-(heavy?1:0)+r()*1.2),1,5),tags:[],note:'',ts:Date.now()});
   }
-  const R=(name,load,diff,evalType,hours)=>S.ratings.push({id:uid(),course:name,load,diff,evalType,hours,demo:true});
-  [[5,5,'certamenes',12],[4,5,'certamenes',10],[5,4,'certamenes',11]].forEach(a=>R('Cálculo III',...a));
-  [[4,4,'certamenes',8],[4,5,'certamenes',9],[3,4,'mixto',7],[4,4,'certamenes',8]].forEach(a=>R('Termodinámica',...a));
-  [[3,3,'mixto',6],[3,3,'entregas',7],[4,3,'mixto',6]].forEach(a=>R('Estadística',...a));
-  [[2,2,'controles',4],[2,2,'controles',3],[3,2,'mixto',4]].forEach(a=>R('Economía',...a));
   loadDraft();replanAll();toast('Datos de ejemplo cargados. Activé el check-in solo para el ejemplo; puedes revocarlo en Ajustes → Privacidad.');render();
 }
 function setStyle(id){

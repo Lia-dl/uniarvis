@@ -5,6 +5,7 @@ const fs=require('fs');
   const base=process.argv[2],tmp=process.argv[3];fs.mkdirSync(tmp,{recursive:true});
   const b=await chromium.launch();
   const ctx=await b.newContext({viewport:{width:1100,height:900},acceptDownloads:true});
+  await ctx.addInitScript(()=>{try{localStorage.setItem('entrenador-academico-tour-seen-v1','1')}catch(e){}});
   const p=await ctx.newPage();
   const res=[],errs=[],ext=[];
   const ok=(n,c,x='')=>res.push((c?'OK   ':'FALLA')+' '+n+(x?'  → '+x:''));
@@ -19,10 +20,6 @@ const fs=require('fs');
       await p.locator('.hud-btn').click();
     }
   };
-  const acceptConsent=async()=>{
-    const b=p.locator('text=Acepto y quiero usar el check-in');
-    if(await b.count())await b.click();
-  };
   const open=async(sec,sub)=>{
     await p.locator('.brand').click();
     if(sec!=='Inicio')await p.locator('.home-card').filter({hasText:sec}).click();
@@ -34,7 +31,6 @@ const fs=require('fs');
   };
   await p.goto(base);
   await onboard();
-  await acceptConsent();
 
   // --- PWA ---
   await p.evaluate(()=>navigator.serviceWorker.ready);
@@ -45,7 +41,7 @@ const fs=require('fs');
   const ic=await p.evaluate(async()=>{const o=[];for(const u of ['icons/icon-192.png','icons/icon-512.png','icons/icon.svg']){const r=await fetch(u);o.push(u+':'+r.status)}return o});
   ok('iconos disponibles',ic.every(x=>x.endsWith(':200')),ic.join(' '));
   await ctx.setOffline(true);await p.reload();
-  ok('funciona sin conexión',(await p.textContent('#app')).includes('Check-in'));
+  ok('funciona sin conexión',(await p.textContent('#app')).includes('Elige por dónde empezar hoy'));
   await ctx.setOffline(false);
 
   // --- datos de ejemplo + ICS ---
@@ -72,6 +68,11 @@ const fs=require('fs');
   await p.setInputFiles('input[onchange="importData(this)"]',bkPath);await confirmOk();await p.waitForTimeout(400);
   const rs=await p.evaluate(()=>({c:S.courses.length,e:S.events.length,d:S.wellbeing.diary.length,t:S.tasks.length}));
   ok('restaurar respaldo recupera todo',rs.c===4&&rs.e===nEv&&rs.d>0&&rs.t>0,JSON.stringify(rs));
+  const antiguo=JSON.parse(JSON.stringify(bj));antiguo.ratings=[{id:'r1',course:'Cálculo III',load:5,diff:5,evalType:'certamenes',hours:12}];
+  fs.writeFileSync(tmp+'/antiguo.json',JSON.stringify(antiguo));
+  await p.setInputFiles('input[onchange="importData(this)"]',tmp+'/antiguo.json');await confirmOk();await p.waitForTimeout(400);
+  const oldRs=await p.evaluate(()=>({c:S.courses.length,e:S.events.length,r:('ratings' in S)}));
+  ok('respaldo antiguo con aportes se restaura ignorando ratings',oldRs.c===4&&oldRs.e===nEv&&!oldRs.r,JSON.stringify(oldRs));
 
   // --- seguridad al importar ---
   const evil=JSON.parse(JSON.stringify(bj));evil.courses[0].color='#fff" onmouseover="window.__pwn=1';

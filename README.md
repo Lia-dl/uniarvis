@@ -32,12 +32,10 @@ Una agenda más un diario ya existen. Lo distinto aquí es que los dos lados se 
 
 **Salud mental**
 - **Pausas ligadas al calendario**: respiración antes y después de una prueba, la noche previa y dentro de bloques largos de estudio.
-- **Respiración guiada** (4-6, en caja, 4-7-8) y **meditaciones breves** con temporizador.
+- **Respiración guiada** (4-6 por defecto; en caja y 4-7-8 en "Más opciones") y **meditaciones breves** con temporizador en "Más opciones".
 - **Diario con patrones**: cruza tu ánimo y energía con la carga. Son coincidencias en tus datos, no causas ni diagnósticos.
 - **Alertas tempranas amables**: varios días seguidos de ánimo bajo, poco sueño, energía baja, 7 días sin descanso o varios días al tope de tu capacidad.
 - **Derivación a ayuda real**: líneas de crisis de Chile (*4141, Salud Responde 600 360 7777) y un campo para el servicio de apoyo de tu universidad.
-
-**Datos de ramos (aporte anónimo)**: carga, dificultad, tipo de evaluación y estrategias que sirvieron, como datos agregados; sin texto libre ni nombres de docentes. Por ahora son solo locales.
 
 ## Cómo se calcula tu capacidad del día
 
@@ -62,7 +60,7 @@ Con energía baja (nivel 1 o 2, o factor menor a 0,65) el plan de hoy se limita 
    Así se puede **instalar** (PWA), usar **sin conexión** y activar el **cifrado con contraseña**.
 3. En **Ajustes → Datos de ejemplo** hay un botón **Cargar datos de ejemplo** para ver todo en acción.
 
-Al abrir la app aparece **Inicio**, con acceso a las secciones **Planificación, Académico, Bienestar, Social y Ajustes**. Cada sección tiene subpestañas (en móvil, una barra inferior fija y chips con desplazamiento lateral) y la ruta se guarda en la URL (#/academico/notas), así que recargar o usar Atrás vuelve al mismo lugar. El modo visual **Calma** es el predeterminado para perfiles nuevos; el estilo **HUD** sigue disponible en **Ajustes → Apariencia**. Si cambias de tema, modo o estilo, tu elección se conserva.
+Al abrir la app aparece **Inicio**, con acceso a las secciones **Bienestar, Académico, Planificación, Social y Ajustes**. Cada sección tiene subpestañas (en móvil, una barra inferior fija y chips con desplazamiento lateral) y la ruta se guarda en la URL (#/academico/notas), así que recargar o usar Atrás vuelve al mismo lugar. El modo visual **Calma** es el predeterminado para perfiles nuevos; el estilo **HUD** sigue disponible en **Ajustes → Apariencia**. Si cambias de tema, modo o estilo, tu elección se conserva.
 
 ## Publicarla en GitHub Pages
 
@@ -79,7 +77,7 @@ Los datos de ánimo, sueño y energía son **datos sensibles**, y se tratan así
 - Sin Supabase configurado puedes probar **Amigos → Probar con datos de ejemplo**: todo vive en memoria, no se hace ninguna petición de red y nada de ese ejemplo entra en tu respaldo o en el cifrado. Solo una fecha importada desde un amigo se agrega a tus fechas reales.
 - El check-in, la energía, el ánimo, el sueño, el diario, las notas personales y las calificaciones **nunca se envían al servidor**, incluso si usas Amigos. No existe tabla para ellos allí.
 - Puedes eliminar tu cuenta y los datos del servidor desde **Amigos → Eliminar mi cuenta y mis datos del servidor**. Eso no toca tus datos locales.
-- El check-in y el diario piden **consentimiento explícito**. Si no lo das, la app funciona igual como organizador. Puedes revocarlo y borrar tus registros cuando quieras desde **Ajustes → Privacidad**.
+- El check-in y el diario piden **consentimiento explícito** la primera vez que abres el check-in, en **Bienestar**. Si dices "Ahora no", la app funciona igual como organizador y puedes activarlo después en Bienestar o en **Ajustes → Privacidad**, donde también puedes revocarlo y borrar tus registros.
 - **Cifrado opcional con contraseña** (AES-256-GCM, clave derivada con PBKDF2 de 250 000 iteraciones). Si olvidas la contraseña no hay forma de recuperar los datos: descarga un respaldo antes.
 - **Respaldo y restauración** en JSON (cifrado si activaste el cifrado). La restauración valida el archivo y copia solo campos conocidos. La sesión de Supabase **no** se incluye en el respaldo.
 - Sin rachas, puntos ni comparaciones de minutos: no se gamifica el bienestar.

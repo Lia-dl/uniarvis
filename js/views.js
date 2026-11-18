@@ -34,15 +34,17 @@ function homeNotice(){
 }
 function viewInicio(){
   const name=S.profile&&S.profile.name?esc(S.profile.name):'';
-  const descs={planificacion:'Tu día y tu semana, sin sobrecargas.',academico:'Ramos, fechas, notas y datos.',bienestar:'Check-in, pausas y apoyo.',social:'Coordina sesiones con amigos.',ajustes:'Perfil, tema y privacidad.'};
+  const descs={planificacion:'Tu día y tu semana, sin sobrecargas.',academico:'Ramos, fechas, notas y carga.',bienestar:'Check-in, pausas y apoyo.',social:'Coordina sesiones con amigos.',ajustes:'Perfil, tema y privacidad.'};
   const icons=(typeof HOME_ICONS!=='undefined')?HOME_ICONS:[];
-  const cards=SECTIONS.filter(s=>s.key!=='inicio').map((s,i)=>`<button class="home-card" onclick="go('${s.tabs[0][0]}')">
+  const order=['bienestar','academico','planificacion','social','ajustes'];
+  const cards=order.map(k=>SECTIONS.find(s=>s.key===k)).filter(Boolean).map(s=>{
+    const i=SECTIONS.indexOf(s)-1;
+    return `<button class="home-card" onclick="go('${s.tabs[0][0]}')">
     <span class="home-icon">${icons[i]||''}</span>
     <span class="home-copy"><b>${s.label}</b><span>${descs[s.key]||''}</span></span>
-    <span class="home-arrow" aria-hidden="true">→</span></button>`).join('');
+    <span class="home-arrow" aria-hidden="true">→</span></button>`}).join('');
   return `${screenHelp('inicio')}
   <div class="home-head"><div><h2>Hola, ${name}</h2><p class="mute" style="margin-bottom:0">Elige por dónde empezar hoy.</p></div></div>
-  ${!S.consent?consentCard():''}
   ${homeNotice()}
   <div class="home-menu">${cards}</div>`;
 }
@@ -141,7 +143,6 @@ function viewHoy(){
   const opts=S.courses.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
   return `${screenHelp('hoy')}
   ${!S.courses.length?'<div class="card empty">Aún no tienes ramos. Agrégalos en "Mis ramos y horario" o <button class="btn" onclick="go(\'ejemplos\')">carga datos de ejemplo</button></div>':''}
-  ${checkinForm(false)}
   ${warnHtml()}${criticalHtml()}
   ${S.soft&&softOn(t0)?`<div class="banner soft">Modo suave activo hasta el ${dshort(S.soft.until)}: tu carga está al 75%. <button class="lnk" onclick="endSoft()">Desactivar</button></div>`:''}
   ${notes.map(n=>`<div class="banner info">${n}</div>`).join('')}
@@ -224,11 +225,10 @@ function viewRamos(){
   return `${screenHelp('ramos')}
   <div class="grid2">
     <div class="card"><h2>Mis ramos</h2>
-      ${S.courses.map(c=>{const col=collective(c.name);return `<div class="task"><span aria-hidden="true" class="dot" style="background:${c.color}"></span><b style="flex:1">${esc(c.name)}</b>
-        ${col?`<span class="mute">datos: dif. ${col.diff.toFixed(1)} <button class="lnk" onclick="setDiff('${c.id}',${Math.round(col.diff)})">usar</button></span>`:''}
+      ${S.courses.map(c=>`<div class="task"><span aria-hidden="true" class="dot" style="background:${c.color}"></span><b style="flex:1">${esc(c.name)}</b>
         <span class="mute">dificultad</span>
         <select data-focus-id="diff-${c.id}" aria-label="Dificultad de ${esc(c.name)}" onchange="setDiff('${c.id}',this.value)">${[1,2,3,4,5].map(n=>`<option ${n===c.difficulty?'selected':''}>${n}</option>`).join('')}</select>
-        <button class="btn del" onclick="delCourse('${c.id}')">Eliminar</button></div>`}).join('')||'<div class="empty">Aún no tienes ramos. Escribe el nombre y toca <b>Agregar</b> para crear tu primer ramo.</div>'}
+        <button class="btn del" onclick="delCourse('${c.id}')">Eliminar</button></div>`).join('')||'<div class="empty">Aún no tienes ramos. Escribe el nombre y toca <b>Agregar</b> para crear tu primer ramo.</div>'}
       <div class="row" style="margin-top:10px"><input id="cn" placeholder="Nombre del ramo">
         <select id="cd" title="Dificultad">${[1,2,3,4,5].map(n=>`<option ${n===3?'selected':''}>${n}</option>`).join('')}</select>
         <button class="btn" data-focus-id="add-course" onclick="addCourse()">Agregar</button></div>
@@ -314,24 +314,27 @@ function viewCheckin(){
 function viewBienestar(){return viewCheckin()}
 function viewRespiracion(){
   const T=TECH[bsel];
+  const other=Object.entries(TECH).filter(([k])=>k!=='larga');
   return `${screenHelp('respiracion')}
   <div class="card"><h2>Respiración y meditaciones</h2>
     <div class="mute">Herramientas breves para bajar la activación. No son un tratamiento: solo te ayudan a hacer una pausa consciente.</div></div>
   <div class="grid2">
     <div class="card"><h3>Respiración guiada</h3>
-      <select onchange="setTech(this.value)" style="width:100%">${Object.entries(TECH).map(([k,v])=>`<option value="${k}" ${k===bsel?'selected':''}>${v.name}</option>`).join('')}</select>
-      <p class="mute">${T.desc}</p>
+      <p class="mute"><b>${T.name}</b> · ${T.desc}</p>
       <div class="bwrap"><div id="bcircle"></div></div>
       <div class="bnum"><div id="blabel">${bt?'':'Listo cuando quieras'}</div><div id="bcount" class="mute"></div><div id="bcycles" class="mute"></div></div>
       <div class="row" style="justify-content:center;margin-top:8px">
         ${bt?'<button class="btn" onclick="stopBreath()">Detener</button>':'<button class="btn" onclick="startBreath()">Comenzar</button>'}</div>
     </div>
-    <div class="card"><h3>Meditaciones breves</h3>
+    <div class="card"><details><summary>Más opciones</summary>
+      <p class="mute">Otras respiraciones y meditaciones breves.</p>
+      <div class="row">${other.map(([k,v])=>`<button class="btn sec" onclick="goBreath('${k}')">${v.name}</button>`).join('')}</div>
+      <h3>Meditaciones breves</h3>
       ${mt?`<div class="banner lock row" style="justify-content:space-between"><span>En curso: <b>${esc(mt.name)}</b> — <b id="mtime">${mfmt(mt.left)}</b></span><button class="btn" onclick="stopMed()">Detener</button></div>`:''}
       ${MEDS.map(m=>`<details><summary>${m.name} · ${m.min} min</summary>
         <p class="mute">${m.desc}</p><ol>${m.steps.map(s=>`<li>${s}</li>`).join('')}</ol>
         <button class="btn sec" ${mt||bt?'disabled':''} onclick="startMed('${m.id}')">Iniciar temporizador (${m.min} min)</button></details>`).join('')}
-    </div>
+    </details></div>
   </div>`;
 }
 function viewPausas(){
@@ -426,32 +429,6 @@ function viewSalud(){
       <div class="mute" style="margin-top:2px">${r.nextEv?`Próxima fecha: ${dshort(r.nextEv.date)} (${esc(r.nextEv.title)})`:'Sin evaluaciones próximas'}</div></div>`).join('')}
     </div>
     <div class="mute">Cada columna es un día (hoy a la derecha).</div>
-  </div>`;
-}
-function viewDatos(){
-  const agg=aggRatings();
-  return `${screenHelp('datos')}
-  <div class="card"><h2>Datos de ramos (anónimos y agregados)</h2>
-    <p class="mute" style="margin-top:0">En vez de reseñas con texto libre (que traen problemas de moderación, difamación y sesgo), aquí solo hay números anónimos: carga, dificultad, tipo de evaluación y horas por semana. No se muestra ningún promedio hasta tener al menos ${MIN_N} aportes por ramo.</p>
-    ${agg.map(a=>`<div class="task"><b style="flex:1">${esc(a.name)}</b>
-      ${a.n>=MIN_N?`<span class="tag">Carga ${a.load.toFixed(1)}/5</span><span class="tag">Dificultad ${a.diff.toFixed(1)}/5</span><span class="tag">${EVAL_TYPES[a.evalType]}</span><span class="tag">~${a.hours.toFixed(0)} h/semana</span><span class="mute">n=${a.n}</span>`
-      :`<span class="mute">Faltan aportes (${a.n} de ${MIN_N}) para mostrar datos</span>`}</div>`).join('')||'<div class="empty">Aún no hay aportes. Selecciona un ramo abajo y toca <b>Aportar</b> para agregar el primero.</div>'}
-  </div>
-  <div class="grid2">
-    <div class="card"><h3>Aportar mis datos de un ramo (anónimo)</h3>
-      <div class="row" style="flex-direction:column;align-items:stretch">
-        <select id="rc">${S.courses.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select>
-        <label class="mute">Carga de trabajo (1 baja – 5 muy alta)<br><select id="rl">${[1,2,3,4,5].map(n=>`<option ${n===3?'selected':''}>${n}</option>`).join('')}</select></label>
-        <label class="mute">Dificultad (1 – 5)<br><select id="rd">${[1,2,3,4,5].map(n=>`<option ${n===3?'selected':''}>${n}</option>`).join('')}</select></label>
-        <label class="mute">Tipo de evaluación<br><select id="rt">${Object.entries(EVAL_TYPES).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label>
-        <label class="mute">Horas por semana fuera de clases<br><input id="rh" type="number" min="0" max="40" value="6"></label>
-        <button class="btn" onclick="addRating()">Aportar</button></div>
-    </div>
-    <div class="card"><h3>Compartir y combinar datos</h3>
-      <p class="mute">Los aportes viven solo en este navegador. Para que sean colectivos de verdad, puedes exportar este archivo (sin nombres ni texto) y combinarlo con el de otros, o conectar la app a un backend.</p>
-      <div class="row"><button class="btn sec" onclick="exportRatings()">Exportar aportes</button>
-      <label class="btn sec" style="cursor:pointer">Importar aportes<input type="file" accept=".json" style="display:none" onchange="importRatings(this)"></label></div>
-    </div>
   </div>`;
 }
 function viewTema(){

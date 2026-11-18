@@ -128,6 +128,7 @@ const fs=require('fs');
   };
 
   const ctx0=await b.newContext({serviceWorkers:'block'});
+  await ctx0.addInitScript(()=>{try{localStorage.setItem('entrenador-academico-tour-seen-v1','1')}catch(e){}});
   const p0=await ctx0.newPage();
   p0.on('pageerror',e=>errs.push('sin config: '+e.message));
   let sinConfig=0;
@@ -141,6 +142,7 @@ const fs=require('fs');
   await ctx0.close();
 
   const ctx=await b.newContext({serviceWorkers:'block'});
+  await ctx.addInitScript(()=>{try{localStorage.setItem('entrenador-academico-tour-seen-v1','1')}catch(e){}});
   await setup(ctx);
   const p=await ctx.newPage();
   p.on('pageerror',e=>errs.push('pageerror: '+e.message));
@@ -153,7 +155,6 @@ const fs=require('fs');
     S.courses=[{id:'c1',name:'Cálculo III',difficulty:3,color:'#3b6df0',grades:[]},
       {id:'c2',name:'Economía',difficulty:2,color:'#e0693a',grades:[]}];
     S.wellbeing.diary=[{date:today(),mood:1,energy:1,sleep:1,tags:['SECRETO_ESTADO_ANIMO'],note:'SECRETO_DIARIO',ts:1}];
-    S.ratings=[{id:'r1',course:'Cálculo III',load:5,diff:5,evalType:'certamenes',hours:12,score:99,weight:100}];
     S.events=[{id:'ev-share',courseId:'c1',title:'Certamen compartido',date:addDays(today(),5),type:'evaluacion'},
       {id:'ev-private',courseId:'c2',title:'SECRETO_FECHA',date:addDays(today(),6),type:'entrega'}];
     replanAll();
