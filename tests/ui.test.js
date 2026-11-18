@@ -271,7 +271,7 @@ const fs=require('fs');
   await onboard();
   const screens=[['inicio','Inicio'],['hoy','Planificación','Hoy'],['semana','Planificación','Semana'],
     ['ramos','Académico','Mis ramos y horario'],['syllabus','Académico','Syllabus y fechas'],['notas','Académico','Notas y ponderaciones'],
-    ['salud','Académico','Carga por semana'],
+    ['herramientas','Académico','Herramientas'],['salud','Académico','Carga por semana'],
     ['checkin','Bienestar','Check-in'],['respiracion','Bienestar','Respiración y meditaciones'],['pausas','Bienestar','Pausas rápidas'],['apoyo','Bienestar','Apoyo'],
     ['amigos','Social'],['perfil','Ajustes','Perfil'],['tema','Ajustes','Apariencia'],['privacidad','Ajustes','Privacidad'],['ejemplos','Ajustes','Datos de ejemplo']];
   for(const [k,sec,sub] of screens){

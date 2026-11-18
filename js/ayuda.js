@@ -1,4 +1,4 @@
-﻿/* Textos del tour de bienvenida y ayuda contextual (editar aquí sin tocar componentes) */
+/* Textos del tour de bienvenida y ayuda contextual (editar aquí sin tocar componentes) */
 const TOUR_SEEN_KEY='entrenador-academico-tour-seen-v1';
 
 const TOUR_STEPS=[
@@ -87,6 +87,15 @@ const AYUDA={
       'Agrega una evaluación indicando nombre, nota y porcentaje.',
       'Edita los valores si cambian y elimina evaluaciones que no correspondan.',
       'Revisa el promedio actual y el porcentaje ponderado por ramo.'
+    ]
+  },
+  herramientas:{
+    title:'Herramientas',
+    desc:'Pomodoro con fases configurables y flashcards con repaso espaciado para estudiar sin perder el hilo.',
+    steps:[
+      'Inicia un foco de 25 minutos (o ajusta los tiempos) y pausa, reinicia o salta de fase cuando lo necesites.',
+      'Si eliges una micro-tarea de hoy, al terminar el foco se suman esos minutos como estudio.',
+      'Crea mazos, importa tarjetas desde texto y repasa solo lo que toca hoy con las 5 cajas Leitner.'
     ]
   },
   salud:{

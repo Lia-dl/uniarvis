@@ -26,6 +26,8 @@ Una agenda más un diario ya existen. Lo distinto aquí es que los dos lados se 
 **Organización**
 - **Syllabus**: subes un PDF (o pegas el texto), la app extrae fechas y evaluaciones y **te pide confirmar** antes de agregarlas, porque la extracción automática se equivoca.
 - **Horario desde calendario (.ics)**: en *Mis ramos y horario* (o en el onboarding) subes un .ics de hasta 2 MB. Lee VEVENT semanales (RRULE, BYDAY, UNTIL/COUNT), líneas plegadas y zonas horarias (TZID y UTC → hora local de Chile) sin librerías ni envío del archivo. Los bloques repetitivos se muestran para **confirmar**: puedes marcarlos, editar el nombre y asignarlos a un ramo existente o crear uno nuevo; los eventos sueltos se listan aparte como posibles evaluaciones y no se guardan.
+- **Notas con meta clara**: por ramo calcula la nota necesaria en lo que queda, muestra la próxima evaluación por fecha y avisa con calma si la ponderación no suma 100 %. La aprobación (4,0 por defecto) y el redondeo del promedio a un decimal son configurables; acepta `5,5` y `5.5` y siempre muestra coma decimal.
+- **Herramientas** (en Académico): Pomodoro y flashcards con repaso espaciado, sin rachas, puntos ni récords.
 - **Micro-tareas** de 15 a 30 min, con más tiempo y más anticipación para los ramos que más te cuestan.
 - **Semanas críticas**: avisa hasta 4 semanas antes cuando se juntan 3 evaluaciones, entregas o controles en 5 días, y propone empezar antes.
 - **Reprogramación sin culpa**: lo que no alcanzas se redistribuye solo; no hay lista de "atrasadas" ni rojos.
@@ -49,6 +51,14 @@ Una agenda más un diario ya existen. Lo distinto aquí es que los dos lados se 
 | Resultado | Redondeado a 15 min, mínimo 30 |
 
 Con energía baja (nivel 1 o 2, o factor menor a 0,65) el plan de hoy se limita al **mínimo viable** (por defecto 60 min × el factor del día). La app muestra este desglose en "¿Cómo se calculó mi capacidad de hoy?".
+
+## Notas y herramientas de estudio
+
+**Notas y ponderaciones.** La nota necesaria se calcula como `(nota de aprobación − Σ nota · peso rendido) / Σ peso pendiente`, suponiendo la misma nota en todas las evaluaciones que faltan. Si el resultado es 1,0 o menos, el ramo ya está aprobado con lo rendido; si supera 7,0 se dice con tono amable y se sugiere revisar un examen de repetición. El peso pendiente es el que falta para completar 100 % y la próxima evaluación se toma de las fechas del ramo ordenadas por fecha. Si las ponderaciones no suman 100 %, aparece un aviso informativo con cuánto falta o sobra, sin errores rojos.
+
+**Pomodoro.** 25 min de foco, 5 de descanso corto y 15 de largo cada 4 focos, todo configurable. Tiene iniciar, pausar, reiniciar y saltar fase, y muestra la fase y el contador (por ejemplo, "Foco · 1 de 4"). El tiempo se calcula con marcas de tiempo (`Date.now()`), así que no se desfasa en segundo plano y retoma donde iba al recargar. Opcionalmente eliges un ramo o una micro-tarea de hoy: al terminar un foco se suman esos minutos como estudio. En los descansos ofrece, sin obligar, la respiración por defecto de Bienestar. El sonido suave es opcional (Web Audio, sin archivos) y las notificaciones solo aparecen si ya hay permiso: nunca se pide desde aquí. No hay rachas, puntos ni récords.
+
+**Flashcards.** Mazos por ramo o sin ramo: crear, renombrar, borrar con confirmación y exportar en texto (una tarjeta por línea, frente y reverso separados por tabulación). La importación acepta ese mismo formato o ` ; ` como separador, así que sirve para pegar desde Excel/Sheets o una exportación de Anki en texto. Frente y reverso respetan saltos de línea, hasta 1000 caracteres por lado y 5000 tarjetas en total. La importación muestra una vista previa antes de confirmar. El modo estudio usa Leitner de 5 cajas (1, 2, 4, 8 y 16 días): muestra solo lo que toca hoy con un tope configurable (20 por defecto), frente → "Mostrar respuesta" → "La sabía" (sube una caja) o "No la sabía" (vuelve a la caja 1). Al final da un resumen neutro: cuántas repasaste y cuántas vuelven mañana, sin porcentajes de fracaso ni rojos.
 
 ## Probarla
 
@@ -78,7 +88,7 @@ Los datos de ánimo, sueño y energía son **datos sensibles**, y se tratan así
 - Por defecto todo se guarda **solo en tu navegador** (almacenamiento local). La app no hace peticiones externas: el lector de PDF viene incluido y los .ics de horario se parsean en el navegador, sin subir el archivo.
 - **Amigos es opcional** y usa tu propio proyecto de Supabase. Si inicias sesión, al servidor van **solo**: tu nombre visible, tu código de amigo, tus relaciones de amistad, las fechas de los ramos que marques explícitamente como compartidos y tus sesiones de estudio.
 - Sin Supabase configurado puedes probar **Amigos → Probar con datos de ejemplo**: todo vive en memoria, no se hace ninguna petición de red y nada de ese ejemplo entra en tu respaldo o en el cifrado. Solo una fecha importada desde un amigo se agrega a tus fechas reales.
-- El check-in, la energía, el ánimo, el sueño, el diario, las notas personales y las calificaciones **nunca se envían al servidor**, incluso si usas Amigos. No existe tabla para ellos allí.
+- El check-in, la energía, el ánimo, el sueño, el diario, las notas personales, las calificaciones, los mazos de flashcards y la configuración del Pomodoro **nunca se envían al servidor**, incluso si usas Amigos. No existe tabla para ellos allí.
 - Puedes eliminar tu cuenta y los datos del servidor desde **Amigos → Eliminar mi cuenta y mis datos del servidor**. Eso no toca tus datos locales.
 - El check-in y el diario piden **consentimiento explícito** la primera vez que abres el check-in, en **Bienestar**. Si dices "Ahora no", la app funciona igual como organizador y puedes activarlo después en Bienestar o en **Ajustes → Privacidad**, donde también puedes revocarlo y borrar tus registros.
 - **Cifrado opcional con contraseña** (AES-256-GCM, clave derivada con PBKDF2 de 250 000 iteraciones). Si olvidas la contraseña no hay forma de recuperar los datos: descarga un respaldo antes.
@@ -103,6 +113,7 @@ js/state.js           estado y persistencia local
 js/capacity.js        capacidad realista del día
 js/planner.js         micro-tareas y semanas críticas
 js/wellbeing.js       check-in, alertas, pausas, respiración, patrones
+js/tools.js           Pomodoro y flashcards (Herramientas)
 js/syllabus.js        lectura de syllabus (PDF/texto)
 js/actions.js         acciones, respaldo, .ics, datos de ejemplo
 js/views.js           vistas de cada sección
@@ -120,7 +131,7 @@ docs/screenshots/     capturas del README
 
 ## Pruebas
 
-Las pruebas abren la app en Chromium y recorren los flujos reales: navegación por secciones y URL, modo Calma predeterminado para perfiles nuevos, migración de perfiles existentes a HUD, capacidad y plan, modo de energía baja, semanas críticas, reprogramación, alertas, consentimiento, lectura de un PDF, respaldo y restauración (incluido un archivo malicioso), importación y exportación de .ics (caso semanal, TZID/UTC, archivo malformado, límite de 2 MB y confirmación en la interfaz), introducción de 3 pasos (solo la primera vez, Saltar y repetirla desde Ajustes), funcionamiento sin conexión, cifrado, Amigos (con Supabase simulado mediante page.route(), incluida una comprobación de que nunca se envían datos de bienestar) y el modo demo sin red.
+Las pruebas abren la app en Chromium y recorren los flujos reales: navegación por secciones y URL (incluida Herramientas), modo Calma predeterminado para perfiles nuevos, migración de perfiles existentes a HUD, capacidad y plan, modo de energía baja, semanas críticas, reprogramación, alertas, consentimiento, calculadora de notas (caso normal, ya aprobado, meta alta, ponderaciones que no suman 100 %, redondeo 3,95 → 4,0, coma decimal y próxima evaluación), Pomodoro (retoma tras recargar y descanso largo después de 4 focos), flashcards (importación con tabulación y con ` ; `, avance de cajas y fechas Leitner), lectura de un PDF, respaldo y restauración (incluidos los campos nuevos y un archivo malicioso), importación y exportación de .ics (caso semanal, TZID/UTC, archivo malformado, límite de 2 MB y confirmación en la interfaz), introducción de 3 pasos (solo la primera vez, Saltar y repetirla desde Ajustes), funcionamiento sin conexión, cifrado, Amigos (con Supabase simulado mediante page.route(), incluida una comprobación de que nunca se envían datos de bienestar) y el modo demo sin red.
 
 `ash
 npm install

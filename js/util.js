@@ -1,4 +1,4 @@
-﻿/* U.A.R.V.I.S. · Utilidades: fechas, formato, helpers */
+/* U.A.R.V.I.S. · Utilidades: fechas, formato, helpers */
 /* ===================== Utilidades ===================== */
 const $=s=>document.querySelector(s);
 const pad=n=>String(n).padStart(2,'0');
@@ -11,6 +11,8 @@ const mondayOf=s=>addDays(s,-((parse(s).getDay()+6)%7));
 const uid=()=>Math.random().toString(36).slice(2,9);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const comma=v=>String(v).replace('.',',');
+const parseNum=v=>parseFloat(String(v==null?'':v).replace(',','.'));
 const toMin=t=>{const [h,m]=t.split(':').map(Number);return h*60+m};
 const dshort=s=>{const d=parse(s);return `${pad(d.getDate())}/${pad(d.getMonth()+1)}`};
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));

@@ -1,9 +1,9 @@
-﻿/* U.A.R.V.I.S. · Render principal y arranque */
+/* U.A.R.V.I.S. · Render principal y arranque */
 /* ===================== Render ===================== */
 const SECTIONS=[
   {key:'inicio',label:'Inicio',tabs:[]},
   {key:'planificacion',label:'Planificación',tabs:[['hoy','Hoy'],['semana','Semana']]},
-  {key:'academico',label:'Académico',tabs:[['ramos','Mis ramos y horario'],['syllabus','Syllabus y fechas'],['notas','Notas y ponderaciones'],['salud','Carga por semana']]},
+  {key:'academico',label:'Académico',tabs:[['ramos','Mis ramos y horario'],['syllabus','Syllabus y fechas'],['notas','Notas y ponderaciones'],['herramientas','Herramientas'],['salud','Carga por semana']]},
   {key:'bienestar',label:'Bienestar',tabs:[['checkin','Check-in'],['respiracion','Respiración y meditaciones'],['pausas','Pausas rápidas'],['apoyo','Apoyo']]},
   {key:'social',label:'Social',tabs:[['amigos','Amigos']]},
   {key:'ajustes',label:'Ajustes',tabs:[['perfil','Perfil'],['tema','Apariencia'],['privacidad','Privacidad'],['ejemplos','Datos de ejemplo']]}
@@ -11,7 +11,7 @@ const SECTIONS=[
 const ROUTE={
   inicio:{section:'inicio',tab:'inicio'},
   hoy:{section:'planificacion',tab:'hoy'},semana:{section:'planificacion',tab:'semana'},
-  ramos:{section:'academico',tab:'ramos'},syllabus:{section:'academico',tab:'syllabus'},notas:{section:'academico',tab:'notas'},
+  ramos:{section:'academico',tab:'ramos'},syllabus:{section:'academico',tab:'syllabus'},notas:{section:'academico',tab:'notas'},herramientas:{section:'academico',tab:'herramientas'},
   salud:{section:'academico',tab:'salud'},calor:{section:'academico',tab:'salud'},
   checkin:{section:'bienestar',tab:'checkin'},bienestar:{section:'bienestar',tab:'checkin'},respiracion:{section:'bienestar',tab:'respiracion'},
   pausas:{section:'bienestar',tab:'pausas'},apoyo:{section:'bienestar',tab:'apoyo'},
@@ -107,7 +107,7 @@ function render(){
     if(!mob){mob=document.createElement('div');mob.id='mobile-nav';document.body.appendChild(mob)}
     mob.innerHTML=mobileNavHtml();
   }
-  const views={inicio:viewInicio,hoy:viewHoy,semana:viewSemana,ramos:viewRamos,syllabus:viewSyllabus,notas:viewNotas,salud:viewSalud,
+  const views={inicio:viewInicio,hoy:viewHoy,semana:viewSemana,ramos:viewRamos,syllabus:viewSyllabus,notas:viewNotas,herramientas:viewTools,salud:viewSalud,
     checkin:viewCheckin,bienestar:viewBienestar,respiracion:viewRespiracion,pausas:viewPausas,apoyo:viewApoyo,
     amigos:viewAmigos,perfil:viewPerfil,tema:viewTema,privacidad:viewPrivacidad,ejemplos:viewDatosEjemplo};
   const sec=SECTIONS.find(s=>s.key===section);
@@ -131,6 +131,7 @@ function checkNewDay(previous){
 }
 function start(){
   loadDraft();
+  if(typeof pomResume==='function')pomResume();
   lastPlanDay=today();
   if(S.lastPlan!==today()&&S.courses.length)replanAll();
   const r=routeFromHash();section=r.section;tab=r.tab;

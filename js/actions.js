@@ -104,9 +104,9 @@ function addCourse(){
 function setDiff(id,v){course(id).difficulty=+v;replanAll();render()}
 function addGrade(cid){
   const c=course(cid);if(!c)return;
-  const name=(($('#gn-'+cid)||{}).value||'').trim(),score=parseFloat((($('#gs-'+cid)||{}).value||'').replace(',','.')),weight=parseFloat((($('#gw-'+cid)||{}).value||'').replace(',','.'));
+  const name=(($('#gn-'+cid)||{}).value||'').trim(),score=parseNum(($('#gs-'+cid)||{}).value),weight=parseNum(($('#gw-'+cid)||{}).value);
   if(!name)return toast('Ingresa el nombre de la evaluación.');
-  if(!isFinite(score))return toast('Ingresa una nota válida.');
+  if(!isFinite(score))return toast('Ingresa una nota válida (por ejemplo 5,5 o 5.5).');
   if(!isFinite(weight)||weight<0||weight>100)return toast('Ingresa una ponderación entre 0 y 100%.');
   if(!Array.isArray(c.grades))c.grades=[];
   c.grades.push({id:uid(),name:name.slice(0,80),score:Math.round(score*100)/100,weight:Math.round(weight*100)/100});
@@ -116,8 +116,14 @@ function delGrade(cid,gid){const c=course(cid);if(!c)return;undoable('Nota elimi
 function setGrade(cid,gid,field,val){
   const c=course(cid);if(!c)return;const g=(c.grades||[]).find(x=>x.id===gid);if(!g)return;
   if(field==='name')g.name=String(val).trim().slice(0,80);
-  else if(field==='score'){const n=parseFloat(String(val).replace(',','.'));if(isFinite(n))g.score=Math.round(n*100)/100}
-  else if(field==='weight'){const n=parseFloat(String(val).replace(',','.'));if(isFinite(n)&&n>=0&&n<=100)g.weight=Math.round(n*100)/100}
+  else if(field==='score'){const n=parseNum(val);if(isFinite(n))g.score=Math.round(n*100)/100}
+  else if(field==='weight'){const n=parseNum(val);if(isFinite(n)&&n>=0&&n<=100)g.weight=Math.round(n*100)/100}
+  save();render();
+}
+function setGradeOption(cid,field,val){
+  const c=course(cid);if(!c)return;
+  if(field==='passGrade'){const n=parseNum(val);if(!isFinite(n)||n<1||n>7)return toast('La nota de aprobación debe estar entre 1,0 y 7,0.');c.passGrade=Math.round(n*100)/100}
+  else if(field==='roundFinal')c.roundFinal=!!val;
   save();render();
 }
 function delCourse(id){
@@ -183,6 +189,8 @@ function validState(j){
   for(const c of j.courses){
     if(!(c&&RX.id.test(c.id)&&str(c.name,120)&&int(c.difficulty,1,5)&&RX.color.test(c.color)))return 'ramos';
     if(c.share!==undefined&&typeof c.share!=='boolean')return 'ramos';
+    if(c.passGrade!==undefined&&!num(c.passGrade,1,7))return 'notas';
+    if(c.roundFinal!==undefined&&typeof c.roundFinal!=='boolean')return 'notas';
     if(c.grades!==undefined){
       if(!Array.isArray(c.grades))return 'notas';
       for(const g of c.grades)if(!(g&&RX.id.test(g.id)&&str(g.name,80)&&num(g.score,-100,100)&&num(g.weight,0,100)))return 'notas';
@@ -208,6 +216,7 @@ function validState(j){
     if(!Array.isArray(dia))return 'diario';
     for(const e of dia)if(!(e&&RX.date.test(e.date)&&[e.mood,e.energy,e.sleep].every(v=>v==null||int(v,1,5))&&(e.tags===undefined||(Array.isArray(e.tags)&&e.tags.every(t=>str(t,40))))&&(e.note===undefined||str(e.note,5000))))return 'diario';
   }
+  if(j.tools!==undefined&&!validTools(j.tools))return 'herramientas';
   return null;
 }
 function cleanState(j){
@@ -215,8 +224,11 @@ function cleanState(j){
   c.classes=j.classes;c.tasks=j.tasks;
   c.events=j.events.map(e=>{const o={id:e.id,courseId:e.courseId,title:String(e.title||'').slice(0,200),date:e.date,type:e.type};if(e.early)o.early=true;if(e.src)o.src={owner:String(e.src.owner).slice(0,40),id:String(e.src.id).slice(0,40)};return o});
   c.sessions=j.sessions.map(s=>{const o={id:s.id,date:s.date,courseId:s.courseId,minutes:+s.minutes};if(s.taskId)o.taskId=s.taskId;if(s.socialId)o.socialId=s.socialId;return o});
-  c.courses=(j.courses||[]).map(x=>({id:x.id,name:x.name,difficulty:x.difficulty,color:x.color,share:x.share===true,grades:(x.grades||[]).map(g=>({id:g.id,name:String(g.name||'').slice(0,80),score:+g.score,weight:+g.weight}))}));
+  c.courses=(j.courses||[]).map(x=>({id:x.id,name:x.name,difficulty:x.difficulty,color:x.color,share:x.share===true,
+    passGrade:Number.isFinite(x.passGrade)?x.passGrade:4,roundFinal:x.roundFinal!==false,
+    grades:(x.grades||[]).map(g=>({id:g.id,name:String(g.name||'').slice(0,80),score:+g.score,weight:+g.weight}))}));
   c.settings={min:int15(j.settings&&j.settings.min)?j.settings.min:60,theme:themeOk(j.settings&&j.settings.theme)?j.settings.theme:'cian',mode:modeOk(j.settings&&j.settings.mode)?j.settings.mode:'light'};
+  c.tools=cleanTools(j.tools);
   c.wellbeing={diary:((j.wellbeing&&j.wellbeing.diary)||[]).map(e=>({date:e.date,mood:e.mood??null,energy:e.energy??null,sleep:e.sleep??null,tags:e.tags||[],note:e.note||'',ts:Number(e.ts)||0}))};
   c.support={name:String((j.support&&j.support.name)||'').slice(0,120),contact:String((j.support&&j.support.contact)||'').slice(0,300)};
   c.consent=j.consent&&typeof j.consent.health==='boolean'?{health:j.consent.health,at:today()}:null;

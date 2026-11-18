@@ -257,24 +257,50 @@ function viewSemana(){
   h+='<div class="agenda-movil">'+days.map((d,i)=>agendaHtml(d,`${DAYS[i]} ${parse(d).getDate()}${d===t0?' · hoy':''}`)).join('')+'</div>';
   return h+criticalHtml();
 }
-function gradeSummary(grades){
+const gradeTxt=v=>Number(v).toFixed(1).replace('.',',');
+const roundedAvg=(v,on)=>v==null||!isFinite(v)?null:(on?Math.round((v+1e-9)*10)/10:Math.round(v*100)/100);
+function nextCourseEvent(cid){
+  return S.events.filter(e=>e.courseId===cid&&e.date>=today()).sort((a,b)=>a.date.localeCompare(b.date)||a.title.localeCompare(b.title))[0]||null;
+}
+function gradeSummary(grades,c){
   const gs=grades||[];let wsum=0,ws=0;gs.forEach(g=>{const w=+g.weight||0,s=+g.score||0;if(w>0){wsum+=w;ws+=s*w}});
-  const avg=wsum?ws/wsum:null;return {avg,wsum:Math.round(wsum*100)/100,rem:Math.round((100-wsum)*100)/100};
+  const avg=wsum?ws/wsum:null,pass=c&&Number.isFinite(c.passGrade)?c.passGrade:4,round=!c||c.roundFinal!==false;
+  const rem=100-wsum;
+  return {avg,wsum:Math.round(wsum*100)/100,rem:Math.round(rem*100)/100,pass,round,shown:roundedAvg(avg,round),need:rem>0?(pass*100-ws)/rem:null};
 }
 function gradesCard(c){
-  const gs=c.grades||[],sum=gradeSummary(gs);
+  const gs=c.grades||[],sum=gradeSummary(gs,c);
   const rows=gs.map(g=>`<tr><td><input data-focus-id="grade-${c.id}-${g.id}-name" value="${esc(g.name)}" onchange="setGrade('${c.id}','${g.id}','name',this.value)"></td>
-    <td><input data-focus-id="grade-${c.id}-${g.id}-score" type="number" step="0.1" style="width:90px" value="${g.score}" onchange="setGrade('${c.id}','${g.id}','score',this.value)"></td>
-    <td><input data-focus-id="grade-${c.id}-${g.id}-weight" type="number" step="1" min="0" max="100" style="width:80px" value="${g.weight}" onchange="setGrade('${c.id}','${g.id}','weight',this.value)">%</td>
+    <td><input data-focus-id="grade-${c.id}-${g.id}-score" type="text" inputmode="decimal" style="width:90px" value="${comma(g.score)}" onchange="setGrade('${c.id}','${g.id}','score',this.value)"></td>
+    <td><input data-focus-id="grade-${c.id}-${g.id}-weight" type="text" inputmode="decimal" style="width:80px" value="${comma(g.weight)}" onchange="setGrade('${c.id}','${g.id}','weight',this.value)">%</td>
     <td><button class="btn del" data-focus-id="del-grade-${g.id}" onclick="delGrade('${c.id}','${g.id}')">Quitar</button></td></tr>`).join('');
+  const weightNote=Math.abs(sum.rem)>0.001?`<div class="banner info" style="margin:10px 0 0">${sum.rem>0
+    ?`Faltan ${comma(String(sum.rem))} % de ponderación por registrar. Puedes completarlo cuando tengas las notas.`
+    :`La ponderación registrada supera el 100 % en ${comma(String(Math.abs(sum.rem)))} %. Vale la pena revisarla, sin apuro.`}</div>`:'';
+  let needMsg='';
+  if(!gs.length)needMsg='<div class="mute" style="margin-top:6px">Registra una nota para ver cuánto necesitas en lo que queda.</div>';
+  else if(sum.need==null)needMsg=sum.avg!=null&&sum.avg>=sum.pass
+    ?'<div class="banner lock" style="margin:6px 0 0">Ya tienes el ramo aprobado con lo rendido.</div>'
+    :'<div class="banner go" style="margin:6px 0 0">Con la ponderación registrada aún no alcanza la nota de aprobación. Si hay examen de repetición, puede ayudar revisarlo.</div>';
+  else if(sum.need<=1)needMsg='<div class="banner lock" style="margin:6px 0 0">Ya tienes el ramo aprobado con lo rendido.</div>';
+  else if(sum.need>7)needMsg=`<div class="banner soft" style="margin:6px 0 0">Necesitarías <b>${gradeTxt(sum.need)}</b> en lo que queda. Es una meta alta; quizá sirva revisar si hay examen de repetición o conversar con el docente.</div>`;
+  else needMsg=`<div class="banner min" style="margin:6px 0 0">Nota necesaria en lo que queda: <b>${gradeTxt(sum.need)}</b> (misma nota en todas las evaluaciones pendientes).</div>`;
+  const next=nextCourseEvent(c.id),needShown=sum.need==null||sum.need<=1?'1,0 como mínimo':gradeTxt(sum.need);
+  const nextTxt=gs.length?`<div class="mute" style="margin-top:6px">${next
+    ?`Próxima evaluación por fecha: <b>${esc(next.title)}</b> (${dshort(next.date)} · ${TYPE_LABEL[next.type]}) — nota necesaria en ella: <b>${needShown}</b>.`
+    :'Aún no registraste una fecha próxima para este ramo; la misma nota aplica a lo que falte.'}</div>`:'';
   return `<div class="card grades-card"><div class="row" style="justify-content:space-between;align-items:flex-start">
       <div><h3 style="margin:0"><span aria-hidden="true" class="dot" style="background:${c.color};display:inline-block;margin-right:6px"></span>${esc(c.name)}</h3>
-      <div class="mute">Promedio actual (ponderado): <b class="hud-num">${sum.avg!=null?sum.avg.toFixed(2):'—'}</b> · Ponderado: ${sum.wsum}% ${sum.wsum>100?'<span style="color:var(--bad)">(&gt;100%)</span>':''} · Restante: ${Math.max(0,sum.rem)}%</div></div></div>
+      <div class="mute">Promedio actual (ponderado): <b class="hud-num">${sum.shown!=null?comma(sum.shown.toFixed(sum.round?1:2)):'—'}</b> · Ponderado: ${comma(String(sum.wsum))}% · Restante: ${comma(String(Math.max(0,sum.rem)))}%</div>
+      <div class="row" style="margin-top:8px"><label class="mute">Nota de aprobación <input id="gp-${c.id}" type="text" inputmode="decimal" style="width:70px" value="${gradeTxt(sum.pass)}" onchange="setGradeOption('${c.id}','passGrade',this.value)"></label>
+        <label class="mute"><input type="checkbox" ${sum.round?'checked':''} onchange="setGradeOption('${c.id}','roundFinal',this.checked)"> Redondear promedio a 1 decimal</label></div></div></div>
+      ${weightNote}
+      <div style="margin-top:12px"><b>Nota necesaria para aprobar</b>${needMsg}${nextTxt}</div>
     ${gs.length?`<table class="grades-tbl"><tr><th>Evaluación</th><th>Nota</th><th>Pond.</th><th></th></tr>${rows}</table>`:'<div class="empty" style="margin-top:8px">Aún no hay evaluaciones. Completa los campos y toca <b>Agregar nota</b>.</div>'}
     <div class="row" style="margin-top:10px">
       <input id="gn-${c.id}" placeholder="Evaluación (ej. Certamen 1)">
-      <input id="gs-${c.id}" type="number" step="0.1" placeholder="Nota" style="width:90px">
-      <input id="gw-${c.id}" type="number" step="1" min="0" max="100" placeholder="%" style="width:80px">
+      <input id="gs-${c.id}" type="text" inputmode="decimal" placeholder="Nota" style="width:90px">
+      <input id="gw-${c.id}" type="text" inputmode="decimal" placeholder="%" style="width:80px">
       <button class="btn sec" data-focus-id="add-grade-${c.id}" onclick="addGrade('${c.id}')">Agregar nota</button></div></div>`;
 }
 function viewRamos(){
@@ -334,7 +360,7 @@ function viewSyllabus(){
 }
 function viewNotas(){
   return `${screenHelp('notas')}<div class="card"><h2>Notas y ponderaciones</h2>
-    <p class="mute" style="margin-top:0">Registra evaluaciones por ramo con su nota y ponderación (%). El promedio ponderado se calcula automáticamente y se guarda en este navegador.</p>
+    <p class="mute" style="margin-top:0">Registra evaluaciones por ramo con su nota y ponderación (%). Puedes escribir 5,5 o 5.5: siempre mostramos coma decimal. Por ramo puedes ajustar la nota de aprobación (4,0 por defecto) y el redondeo del promedio a un decimal.</p>
     ${S.courses.length?S.courses.map(gradesCard).join(''):'<div class="empty">Aún no tienes ramos. Ve a <b>Académico &gt; Mis ramos y horario</b> y toca <b>Agregar</b> para crear uno.</div>'}
   </div>`;
 }

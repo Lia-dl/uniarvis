@@ -183,6 +183,7 @@ tbody tr:hover{background:var(--bg-subtle)}
 .sc.on{border-color:var(--accent);background:var(--accent-soft);color:var(--ink);box-shadow:inset 0 0 0 1px rgba(var(--accent-rgb),.08)}
 .ci-row{margin-bottom:12px}.ci-row b{display:block;margin-bottom:6px;font-size:13px;font-weight:600}
 .pause{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 12px;border-radius:12px;background:var(--ok-soft);margin:8px 0;font-size:13px;border:1px solid rgba(var(--ok-rgb),.18)}
+.tools-pre{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}
 .trend{display:flex;gap:5px;align-items:flex-end;height:72px;margin:8px 0 14px}
 .trend i{flex:1;border-radius:6px 6px 2px 2px;background:var(--line);min-height:4px;transition:height .35s ease,opacity .2s ease}
 .trend i:hover{opacity:.85}
