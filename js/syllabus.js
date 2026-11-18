@@ -73,6 +73,7 @@ async function onFile(inp){
 function analyze(){
   if(!sylCourse)return toast('Primero elige el ramo del syllabus.');
   if(!sylText.trim())return toast('Sube un archivo o pega el texto del syllabus.');
+  if(typeof certamenRememberSyllabus==='function')certamenRememberSyllabus(sylCourse,sylText);
   pending=detectEvents(sylText,sylCourse);
   if(!pending.length)toast('No encontré fechas. Revisa el formato o agrégalas manualmente.');
   render();

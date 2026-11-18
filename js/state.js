@@ -65,7 +65,7 @@ function cleanTools(t){
 }
 const migrateTools=t=>cleanTools(t);
 const fresh=()=>({courses:[],classes:[],events:[],tasks:[],sessions:[],settings:{min:60,theme:'cian',mode:'light',style:'calma',arvis:true},lastPlan:null,
-  wellbeing:{diary:[]},createdAt:today(),lastBackup:null,backupSnooze:null,consent:null,soft:null,adapt:null,moved:null,dismissed:{},support:{name:'',contact:''},profile:{name:'',career:''},tools:freshTools()});
+  wellbeing:{diary:[]},createdAt:today(),lastBackup:null,backupSnooze:null,consent:null,soft:null,adapt:null,moved:null,dismissed:{},support:{name:'',contact:''},profile:{name:'',career:''},certamen:{plans:[],topicsByCourse:{}},tools:freshTools()});
 function migrate(s){
   const f=fresh();for(const k in f)if(s[k]===undefined)s[k]=f[k];
   if(!s.wellbeing||!Array.isArray(s.wellbeing.diary))s.wellbeing={diary:[]};
@@ -79,6 +79,9 @@ function migrate(s){
   delete s.reviews;                               // reseñas de texto libre de versiones anteriores: ya no se guardan
   delete s.ratings;                               // aportes anónimos de ramos de versiones anteriores: ya no se guardan
   if(s.wellbeing)delete s.wellbeing.practices;
+  if(!s.certamen||typeof s.certamen!=='object'||Array.isArray(s.certamen))s.certamen={plans:[],topicsByCourse:{}};
+  if(!Array.isArray(s.certamen.plans))s.certamen.plans=[];
+  if(!s.certamen.topicsByCourse||typeof s.certamen.topicsByCourse!=='object'||Array.isArray(s.certamen.topicsByCourse))s.certamen.topicsByCourse={};
   if(!s.profile||typeof s.profile!=='object')s.profile={name:'',career:''};
   if(s.profile.name==null)s.profile.name=''; if(s.profile.career==null)s.profile.career='';
   delete s.profile.onboarded;                  // introducción eliminada: se ignora en perfiles y respaldos antiguos
