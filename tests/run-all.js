@@ -34,9 +34,9 @@ server.listen(0, '127.0.0.1', async () => {
     await run('ui.test.js', [path.join(root, 'index.html'), path.join(out, 'ui')]),   // por file://
     await run('notas.test.js', [path.join(root, 'index.html')]),                                          // calculadora de notas
     await run('herramientas.test.js', [path.join(root, 'index.html')]),                                   // Pomodoro y flashcards
+    await run('certamen.test.js', [path.join(root, 'index.html')]),                                       // modo certamen
     await run('arvis.test.js', [path.join(root, 'index.html')]),                                          // mascota Arvis
     await run('ics.test.js', [path.join(root, 'index.html'), path.join(out, 'ics')]),                    // parser .ics y confirmación
-    await run('onboarding.test.js', [path.join(root, 'index.html'), path.join(out, 'onboarding')]),      // introducción de 3 pasos
     await run('pwa.test.js', [base, path.join(out, 'pwa')]),                          // por http: PWA, respaldo, .ics, PDF
     await run('crypto.test.js', [base, path.join(out, 'crypto')]),                    // cifrado con contraseña
     await run('social.test.js', [base, path.join(out, 'social')]),                    // Amigos con backend simulado

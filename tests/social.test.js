@@ -150,7 +150,7 @@ const fs=require('fs');
   p.on('dialog',d=>d.accept());
   await p.goto(base);await onboard(p);
   const ids=await p.evaluate(()=>{
-    S=fresh();S.profile={name:'Estudiante',career:'Carrera',onboarded:true};
+    S=fresh();S.profile={name:'Estudiante',career:'Carrera'};
     S.consent={health:true,at:today()};
     S.courses=[{id:'c1',name:'Cálculo III',difficulty:3,color:'#3b6df0',grades:[]},
       {id:'c2',name:'Economía',difficulty:2,color:'#e0693a',grades:[]}];

@@ -49,43 +49,6 @@ function icsPendingHtml(){
     <div class="row" style="margin-top:8px"><button class="btn" onclick="confirmICS()">Confirmar y agregar al horario</button>
       <button class="btn sec" onclick="cancelICS()">Cancelar</button></div></div>`;
 }
-function introHtml(){
-  if(typeof introActive!=='function'||!introActive())return '';
-  const total=3,step=introStep,totalTxt=`${step}/${total}`;
-  let body='';
-  if(step===1){
-    body=`<p class="mute" style="margin-top:0">Empieza con lo mínimo: escribe tus ramos y, si quieres, sube un syllabus para tener las fechas a mano.</p>
-      <div class="hud-form" style="max-width:520px">
-        <label>Nombre del ramo<input id="ob-cn" type="text" maxlength="80" placeholder="Ej. Cálculo III"></label>
-        <label>Dificultad<select id="ob-cd" title="Dificultad">${[1,2,3,4,5].map(n=>`<option ${n===3?'selected':''}>${n}</option>`).join('')}</select></label>
-      </div>
-      <div class="row" style="margin-top:8px"><button class="btn" data-focus-id="intro-add-course" onclick="introAddCourse()">Agregar ramo</button>
-        <button class="btn sec" onclick="go('syllabus')">Subir syllabus</button></div>
-      <p class="mute"><button class="lnk" onclick="loadDemo()">Prefiero ver un ejemplo primero</button> · también puedes hacerlo después en Ajustes → Datos de ejemplo.</p>`;
-  }else if(step===2){
-    body=`<p class="mute" style="margin-top:0">Importa tu horario desde el calendario o agrégalo a mano. Solo se guarda lo que confirmes.</p>
-      <div class="row"><label class="btn sec" style="cursor:pointer">Importar desde calendario (.ics)<input type="file" accept=".ics,text/calendar" style="display:none" onchange="onICSFile(this)"></label></div>
-      ${S.courses.length?`<div class="row" style="margin-top:8px"><select id="ob-kc">${S.courses.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select>
-        <select id="ob-kd">${DAYS.map((d,i)=>`<option value="${i}">${d}</option>`).join('')}</select>
-        <input id="ob-ka" type="time" value="08:10"><input id="ob-kb" type="time" value="09:40">
-        <button class="btn" data-focus-id="intro-add-class" onclick="introAddClass()">Agregar</button></div>`
-      :'<p class="mute">Aún no hay ramos: si importas un .ics, crearemos los ramos por ti.</p>'}
-      ${icsPendingHtml()}`;
-  }else{
-    body=`<p class="mute" style="margin-top:0">El check-in diario toma 20 segundos y registra energía, ánimo y sueño.</p>
-      <p class="mute">Con eso ajusto tu capacidad del día y, si hace falta, dejo solo lo esencial. Es optativo, puedes revocarlo cuando quieras.</p>
-      ${consentCard(true)}`;
-  }
-  return `<div class="card" id="onboarding" aria-label="Introducción">
-    <div class="row" style="justify-content:space-between"><h2 style="margin:0">Configura tu semestre</h2><span class="tag" aria-label="Paso ${step} de ${total}">${totalTxt}</span></div>
-    <p class="mute">${['Ramos','Horario','Primer check-in'][step-1]}</p>
-    ${body}
-    <div class="row" style="justify-content:space-between;margin-top:10px">
-      <button class="btn sec" onclick="introPrev()" ${step===1?'disabled':''}>Atrás</button>
-      <div class="row"><button class="lnk" onclick="introFinish('skipped')">Saltar</button>
-      ${step<3?'<button class="btn" data-focus-id="intro-next" onclick="introNext()">Siguiente</button>':'<button class="btn" data-focus-id="intro-done" onclick="introFinish(\'done\')">Listo</button>'}</div>
-    </div></div>`;
-}
 function viewInicio(){
   const name=S.profile&&S.profile.name?esc(S.profile.name):'';
   const descs={planificacion:'Tu día y tu semana, sin sobrecargas.',academico:'Ramos, fechas, notas y carga.',bienestar:'Check-in, pausas y apoyo.',social:'Coordina sesiones con amigos.',ajustes:'Perfil, tema y privacidad.'};
@@ -98,7 +61,6 @@ function viewInicio(){
     <span class="home-copy"><b>${s.label}</b><span>${descs[s.key]||''}</span></span>
     <span class="home-arrow" aria-hidden="true">→</span></button>`}).join('');
   return `${screenHelp('inicio')}
-  ${introHtml()}
   <div class="home-head"><div><h2>Hola, ${name}</h2><p class="mute" style="margin-bottom:0">Elige por dónde empezar hoy.</p></div></div>
   ${arvisInicioHtml()}
   ${homeNotice()}
@@ -115,8 +77,7 @@ function viewPerfil(){
       <button class="btn" data-focus-id="save-profile" onclick="saveProfile()">Guardar cambios</button>
     </div></div>`;
 }
-function consentCard(onboarding){
-  const yes=onboarding?'introConsent(true)':'setConsent(true)',no=onboarding?'introConsent(false)':'setConsent(false)';
+function consentCard(){
   return `<div class="card"><h3>Antes de empezar: tus datos de bienestar</h3>
     <p style="margin-top:0">El check-in y el diario guardan datos sensibles (energía, ánimo, sueño y notas). Así funcionan:</p>
     <ul style="margin:0 0 10px 18px;padding:0">
@@ -124,8 +85,8 @@ function consentCard(onboarding){
       <li>Los usa la propia app para ajustar tu plan y mostrarte patrones. No hay diagnósticos, puntajes ni rachas.</li>
       <li>Puedes exportarlos, revocar el permiso o borrarlos cuando quieras (en <i>Ajustes → Privacidad</i>).</li>
     </ul>
-    <div class="row"><button class="btn" onclick="${yes}">Acepto y quiero usar el check-in</button>
-    <button class="btn sec" onclick="${no}">Ahora no</button></div>
+    <div class="row"><button class="btn" onclick="setConsent(true)">Acepto y quiero usar el check-in</button>
+    <button class="btn sec" onclick="setConsent(false)">Ahora no</button></div>
     <p class="mute" style="margin-bottom:0">Sin check-in la app igual funciona: calcula tu capacidad con tus clases y tu ritmo.</p></div>`;
 }
 function scaleRow(label,key,arr){
@@ -177,6 +138,59 @@ function agendaHtml(date,title){
   return `<div class="card agenda-card"><h3>${esc(title)}</h3>${items.length?`<div class="agenda">${items.map(x=>
     `<div class="agenda-item ${x.done?'done':''}"><span class="agenda-time">${x.time?esc(x.time):'—'}</span><span>${x.html}</span></div>`).join('')}</div>`:'<div class="empty">Sin compromisos ni estudio planificado.</div>'}</div>`;
 }
+function certamenOffersHtml(){
+  const cs=certCandidates();if(!cs.length)return '';
+  return `<div class="card" id="certamen-offers"><h3>Preparar en modo certamen</h3>
+    <p class="mute" style="margin-top:0">Faltan 7 días o menos. Puedes cambiar las micro-tareas por un plan por fases; no se activa solo.</p>
+    ${cs.map(e=>`<div class="task"><span aria-hidden="true" class="dot" style="background:${ccolor(e.courseId)}"></span>
+      <span style="flex:1"><b>${esc(e.title)}</b><br><span class="mute">${esc(cname(e.courseId))} · ${dshort(e.date)} · ${diffDays(today(),e.date)} día(s)</span></span>
+      <button class="btn sec" data-focus-id="cert-open-${e.id}" onclick="openCertamen('${e.id}')">Preparar en modo certamen</button></div>`).join('')}</div>`;
+}
+function certamenDraftHtml(){
+  if(!certDraft)return '';
+  const ev=S.events.find(e=>e.id===certDraft.eventId);if(!ev)return '';
+  return `<div class="card" id="certamen-draft"><h3>Preparar en modo certamen · ${esc(ev.title)}</h3>
+    <p class="mute" style="margin-top:0">Escribe los temas que entran. Marca <b>Me cuesta</b> para priorizarlos en ejercicios y repaso.</p>
+    ${certDraft.topics.map(t=>`<div class="task" style="flex-wrap:wrap">
+      <input aria-label="Tema que entra en la evaluación" style="flex:1;min-width:160px" maxlength="80" value="${esc(t.name)}" onchange="certSetTopic('${t.id}','name',this.value)">
+      <label class="mute"><input type="checkbox" ${t.hard?'checked':''} onchange="certSetTopic('${t.id}','hard',this.checked)"> Me cuesta</label>
+      <button class="btn del" data-focus-id="cert-del-${t.id}" onclick="certRemoveTopic('${t.id}')">Quitar</button></div>`).join('')}
+    <div class="row" style="margin-top:8px"><button class="btn sec" data-focus-id="cert-add-topic" onclick="certAddTopic()">Agregar tema</button></div>
+    <div class="row" style="margin-top:8px"><label class="mute">Ensayo cronometrado <input id="cert-mock" type="number" min="30" max="240" step="15" style="width:90px" value="${certDraft.mockMin}" onchange="certSetMock(this.value)"> min</label></div>
+    <div class="row" style="margin-top:10px"><button class="btn" data-focus-id="cert-activate" onclick="activateCertamen()">Activar modo certamen</button>
+      <button class="btn sec" onclick="certCancelDraft()">Cancelar</button></div></div>`;
+}
+function certamenActiveHtml(){
+  const planes=certPlans().filter(p=>S.events.some(e=>e.id===p.eventId&&e.date>=today()));
+  if(!planes.length)return '';
+  return planes.map(p=>{
+    const ev=S.events.find(e=>e.id===p.eventId);
+    const tasks=S.tasks.filter(t=>t.certamen&&t.eventId===p.eventId);
+    const rows=p.topics.map(t=>{
+      const cell=phase=>{
+        const task=tasks.find(x=>x.topicId===t.id&&x.phase===phase),label=CERT_PHASES[phase].toLowerCase();
+        if(!task)return `<span class="mute">${label}: sin bloque</span>`;
+        return `<label class="mute"><input type="checkbox" aria-label="${esc(t.name)}: ${label}" data-focus-id="cert-${t.id}-${phase}" ${task.done?'checked':''} onchange="toggleTask('${task.id}')"> ${label}</label>`;
+      };
+      return `<div class="task" style="flex-wrap:wrap"><b style="flex:1;min-width:140px">${esc(t.name)}${t.hard?' <span class="tag">me cuesta</span>':''}</b>
+        <span class="row" style="gap:10px">${cell('teoria')}${cell('ejercicios')}${cell('repaso')}</span></div>`;
+    }).join('');
+    const mock=tasks.find(x=>x.phase==='ensayo'),next=tasks.find(x=>!x.done&&x.date>=today());
+    const decks=(S.tools&&S.tools.flashcards&&S.tools.flashcards.decks||[]).filter(d=>d.courseId===p.courseId);
+    const deckBtn=decks.length?`<button class="btn sec" data-focus-id="cert-flashcards-${p.eventId}" onclick="openCourseFlashcards('${p.courseId}')">Repasar flashcards de este ramo</button>`:'';
+    const pomBtn=next?`<button class="btn sec" data-focus-id="cert-pomodoro-${p.eventId}" onclick="startCertPomodoro('${p.eventId}','${next.id}')">Empezar con Pomodoro</button>`:'';
+    const left=p.leftOut&&p.leftOut.length?`<div class="banner info">Quedó fuera de este repaso: ${p.leftOut.map(x=>`${esc(x.label)} (${x.minutes} min)`).join(', ')}. Prioricé el ensayo y los temas difíciles; no hay nada que compensar.</div>`:'';
+    return `<div class="card" id="certamen-plan-${p.eventId}"><div class="row" style="justify-content:space-between">
+      <h3 style="margin:0">Modo certamen · ${esc(p.title)}</h3>
+      <button class="btn sec" data-focus-id="cert-exit-${p.eventId}" onclick="exitCertamen('${p.eventId}')">Salir del modo certamen</button></div>
+      <p class="mute">${dshort(ev.date)} · ${diffDays(today(),ev.date)} día(s) · ensayo de ${p.mockMin} min${mock?` (${dshort(mock.date)})`:''}</p>
+      ${rows}
+      <div class="row" style="margin-top:10px">${deckBtn}${pomBtn}<button class="btn sec" onclick="goBreath('s478')">Pausa nocturna 4-7-8</button></div>
+      ${left}
+      <p class="mute" style="margin-bottom:0">La noche anterior solo hay repaso ligero y la pausa que ya está en Pausas: nada de contenido nuevo.</p>
+    </div>`;
+  }).join('');
+}
 function viewHoy(){
   const t0=today(),info=capInfo(t0),cap=info.val,min=minFor(t0),done=doneToday(),locked=done>=cap,met=done>=min,low=lowMode(t0);
   const todays=S.tasks.filter(t=>t.date===t0).sort((a,b)=>a.done-b.done||evDate(a).localeCompare(evDate(b)));
@@ -204,6 +218,7 @@ function viewHoy(){
   ${!S.courses.length?arvisVacioHtml('ramos'):''}
   ${!S.courses.length?'<div class="card empty">Aún no tienes ramos. Agrégalos en "Mis ramos y horario" o <button class="btn" onclick="go(\'ejemplos\')">carga datos de ejemplo</button></div>':''}
   ${warnHtml()}${criticalHtml()}
+  ${certamenOffersHtml()}${certamenDraftHtml()}${certamenActiveHtml()}
   ${S.soft&&softOn(t0)?`<div class="banner soft">Modo suave activo hasta el ${dshort(S.soft.until)}: tu carga está al 75%. <button class="lnk" onclick="endSoft()">Desactivar</button></div>`:''}
   ${notes.map(n=>`<div class="banner info">${n}</div>`).join('')}
   ${socialTodayHtml()}
@@ -307,6 +322,11 @@ function gradesCard(c){
       <input id="gw-${c.id}" type="text" inputmode="decimal" placeholder="%" style="width:80px">
       <button class="btn sec" data-focus-id="add-grade-${c.id}" onclick="addGrade('${c.id}')">Agregar nota</button></div></div>`;
 }
+function demoCardHtml(){
+  return `<div class="card"><h3>Datos de ejemplo</h3>
+    <div class="row"><button class="btn sec" data-focus-id="load-demo" onclick="loadDemo()">Cargar datos de ejemplo</button>
+      <span class="mute">Reemplaza tus datos actuales. También está en Ajustes → Datos de ejemplo.</span></div></div>`;
+}
 function viewRamos(){
   return `${screenHelp('ramos')}
   <div class="grid2">
@@ -331,12 +351,14 @@ function viewRamos(){
         <span style="flex:1">${esc(cname(k.courseId))} · ${DAYS[k.day]} ${k.start}–${k.end}</span><button class="btn del" onclick="delClass('${k.id}')">Quitar</button></div>`).join('')}</div>
       <p class="mute">Tus horas de clase definen cuánto puedes estudiar cada día.</p>
     </div>
-  </div>`;
+  </div>
+  ${demoCardHtml()}`;
 }
 function viewSyllabus(){
   const opts=S.courses.map(c=>`<option value="${c.id}" ${c.id===sylCourse?'selected':''}>${esc(c.name)}</option>`).join('');
   const sorted=[...S.events].sort((a,b)=>a.date.localeCompare(b.date));
   return `${screenHelp('syllabus')}
+  ${certamenOffersHtml()}${certamenDraftHtml()}${certamenActiveHtml()}
   <div class="card"><h2>Subir syllabus</h2>
     <div class="row" style="margin-bottom:8px"><select onchange="sylCourse=this.value"><option value="">Elige el ramo…</option>${opts}</select>
       <input type="file" accept=".pdf,.txt,.md,.csv" onchange="onFile(this)"></div>
@@ -360,7 +382,8 @@ function viewSyllabus(){
     ${sorted.map(e=>`<div class="task"><span aria-hidden="true" class="dot" style="background:${ccolor(e.courseId)}"></span>
       <span style="flex:1">${dshort(e.date)} · <b>${TYPE_LABEL[e.type]}</b> · ${esc(cname(e.courseId))} — ${esc(e.title)}${e.early?' <span class="tag">margen extra</span>':''}</span>
       <button class="btn del" onclick="delEvent('${e.id}')">Quitar</button></div>`).join('')||'<div class="empty">Aún no hay fechas registradas. Analiza un syllabus o usa el formulario y toca <b>Agregar manualmente</b>.</div>'}
-  </div>`;
+   </div>
+   ${demoCardHtml()}`;
 }
 function viewNotas(){
   return `${screenHelp('notas')}<div class="card"><h2>Notas y ponderaciones</h2>
@@ -552,8 +575,7 @@ function viewTema(){
     </div>
   </div>
   <div class="card"><h3>Tutorial</h3><p class="mute" style="margin-top:0">Puedes volver a ver la guía de bienvenida con los pasos de cada sección.</p>
-    <div class="row"><button class="btn sec" onclick="startTour(true)">Ver tutorial de nuevo</button>
-      <button class="btn sec" data-focus-id="restart-intro" onclick="restartIntro()">Ver la introducción de nuevo</button></div></div>`;
+    <div class="row"><button class="btn sec" onclick="startTour(true)">Ver tutorial de nuevo</button></div></div>`;
 }
 function viewAmigos(){
   if(!socialConfigured())return `${screenHelp('amigos')}<div class="card"><h2>Amigos</h2>

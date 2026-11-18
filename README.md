@@ -26,10 +26,11 @@ Una agenda más un diario ya existen. Lo distinto aquí es que los dos lados se 
 
 **Organización**
 - **Syllabus**: subes un PDF (o pegas el texto), la app extrae fechas y evaluaciones y **te pide confirmar** antes de agregarlas, porque la extracción automática se equivoca.
-- **Horario desde calendario (.ics)**: en *Mis ramos y horario* (o en el onboarding) subes un .ics de hasta 2 MB. Lee VEVENT semanales (RRULE, BYDAY, UNTIL/COUNT), líneas plegadas y zonas horarias (TZID y UTC → hora local de Chile) sin librerías ni envío del archivo. Los bloques repetitivos se muestran para **confirmar**: puedes marcarlos, editar el nombre y asignarlos a un ramo existente o crear uno nuevo; los eventos sueltos se listan aparte como posibles evaluaciones y no se guardan.
+- **Horario desde calendario (.ics)**: en *Mis ramos y horario* subes un .ics de hasta 2 MB. Lee VEVENT semanales (RRULE, BYDAY, UNTIL/COUNT), líneas plegadas y zonas horarias (TZID y UTC → hora local de Chile) sin librerías ni envío del archivo. Los bloques repetitivos se muestran para **confirmar**: puedes marcarlos, editar el nombre y asignarlos a un ramo existente o crear uno nuevo; los eventos sueltos se listan aparte como posibles evaluaciones y no se guardan.
 - **Notas con meta clara**: por ramo calcula la nota necesaria en lo que queda, muestra la próxima evaluación por fecha y avisa con calma si la ponderación no suma 100 %. La aprobación (4,0 por defecto) y el redondeo del promedio a un decimal son configurables; acepta `5,5` y `5.5` y siempre muestra coma decimal.
 - **Herramientas** (en Académico): Pomodoro y flashcards con repaso espaciado, sin rachas, puntos ni récords.
 - **Micro-tareas** de 15 a 30 min, con más tiempo y más anticipación para los ramos que más te cuestan.
+- **Modo certamen**: cuando faltan 7 días o menos para una prueba, certamen, examen o control, ofrece cambiar esas micro-tareas por un plan por fases (teoría, ejercicios, ensayo cronometrado y repaso ligero). No se activa solo: eliges los temas, marcas los que te cuestan y puedes salir cuando quieras. Si la energía está baja prioriza el ensayo y los temas difíciles, y dice con calma qué quedó fuera. Con dos evaluaciones cerca reparte la capacidad según cercanía y dificultad, como en las semanas críticas.
 - **Semanas críticas**: avisa hasta 4 semanas antes cuando se juntan 3 evaluaciones, entregas o controles en 5 días, y propone empezar antes.
 - **Reprogramación sin culpa**: lo que no alcanzas se redistribuye solo; no hay lista de "atrasadas" ni rojos.
 - **Calendario semanal** con tu horario de clases, y exportación de fechas a .ics (Google Calendar, Outlook, Apple).
@@ -61,6 +62,8 @@ Con energía baja (nivel 1 o 2, o factor menor a 0,65) el plan de hoy se limita 
 
 **Flashcards.** Mazos por ramo o sin ramo: crear, renombrar, borrar con confirmación y exportar en texto (una tarjeta por línea, frente y reverso separados por tabulación). La importación acepta ese mismo formato o ` ; ` como separador, así que sirve para pegar desde Excel/Sheets o una exportación de Anki en texto. Frente y reverso respetan saltos de línea, hasta 1000 caracteres por lado y 5000 tarjetas en total. La importación muestra una vista previa antes de confirmar. El modo estudio usa Leitner de 5 cajas (1, 2, 4, 8 y 16 días): muestra solo lo que toca hoy con un tope configurable (20 por defecto), frente → "Mostrar respuesta" → "La sabía" (sube una caja) o "No la sabía" (vuelve a la caja 1). Al final da un resumen neutro: cuántas repasaste y cuántas vuelven mañana, sin porcentajes de fracaso ni rojos.
 
+**Preparación en modo certamen.** La oferta aparece en *Planificación → Plan del día* y en *Académico → Syllabus y fechas*. Al activarla se reemplazan las micro-tareas sueltas de esa fecha por bloques con casillas de avance por tema (teoría, ejercicios y repaso). El ensayo cronometrado dura lo que indiques —por defecto 90 min o la duración de la evaluación— y se revisan errores el mismo día; la noche anterior es solo repaso ligero de hasta 45 min y la pausa nocturna que ya existe en Bienestar. Si faltan menos de 7 días, el plan se comprime de forma proporcional sin fechas pasadas. Si hay mazos del ramo, el plan ofrece "Repasar flashcards de este ramo", y cada bloque tiene "Empezar con Pomodoro" asociado. El plan se guarda en el respaldo y se conserva al restaurar; salir del modo devuelve las micro-tareas normales.
+
 ## Probarla
 
 1. Abre index.html en tu navegador. Todo funciona, salvo instalarla y usarla sin conexión.
@@ -74,7 +77,7 @@ Con energía baja (nivel 1 o 2, o factor menor a 0,65) el plan de hoy se limita 
 
 Al abrir la app aparece **Inicio**, con acceso a las secciones **Bienestar, Académico, Planificación, Social y Ajustes**. Cada sección tiene subpestañas (en móvil, una barra inferior fija y chips con desplazamiento lateral) y la ruta se guarda en la URL (#/academico/notas), así que recargar o usar Atrás vuelve al mismo lugar. El modo visual **Calma** es el predeterminado para perfiles nuevos; el estilo **HUD** sigue disponible en **Ajustes → Apariencia**. Si cambias de tema, modo o estilo, tu elección se conserva.
 
-Al crear el perfil por primera vez, si aún no hay ramos, aparece en Inicio una **introducción de 3 pasos** (ramos, horario y primer check-in). Cada paso tiene **Saltar**, se muestra el progreso (1/3, 2/3, 3/3) y el estado queda guardado para no volver a mostrarla. En **Ajustes → Apariencia → Ver la introducción de nuevo** puedes repetirla cuando quieras. En el paso 1 hay un enlace **Prefiero ver un ejemplo primero** que carga los datos de ejemplo.
+Al crear el perfil por primera vez se muestra directamente **Inicio**: no hay introducción de 3 pasos ni indicador de progreso. Para explorar la app sin datos propios, el botón **Cargar datos de ejemplo** está en **Académico → Mis ramos y horario**, en **Académico → Syllabus y fechas** y en **Ajustes → Datos de ejemplo**. El consentimiento del check-in se pide igual, la primera vez que abres **Bienestar → Check-in**. Los respaldos antiguos que traían campos de la introducción se restauran normalmente: esos campos se ignoran.
 
 ## Publicarla en GitHub Pages
 
@@ -112,7 +115,7 @@ js/ics.js             parser de horarios .ics (sin librerías)
 js/crypto.js          cifrado opcional con contraseña
 js/state.js           estado y persistencia local
 js/capacity.js        capacidad realista del día
-js/planner.js         micro-tareas y semanas críticas
+js/planner.js         micro-tareas, semanas críticas y modo certamen
 js/wellbeing.js       check-in, alertas, pausas, respiración, patrones
 js/arvis.js           mascota Arvis: mensajes y estados según energía
 js/tools.js           Pomodoro y flashcards (Herramientas)
@@ -133,7 +136,7 @@ docs/screenshots/     capturas del README
 
 ## Pruebas
 
-Las pruebas abren la app en Chromium y recorren los flujos reales: navegación por secciones y URL (incluida Herramientas), modo Calma predeterminado para perfiles nuevos, migración de perfiles existentes a HUD, capacidad y plan, modo de energía baja, semanas críticas, reprogramación, alertas, consentimiento, calculadora de notas (caso normal, ya aprobado, meta alta, ponderaciones que no suman 100 %, redondeo 3,95 → 4,0, coma decimal y próxima evaluación), Pomodoro (retoma tras recargar y descanso largo después de 4 focos), flashcards (importación con tabulación y con ` ; `, avance de cajas y fechas Leitner), Arvis (energía 5 y 1, sin check-in con enlace a Bienestar, interruptor de Ajustes, celebración, foco, alerta, estados vacíos y avatar de ayuda), lectura de un PDF, respaldo y restauración (incluidos los campos nuevos y un archivo malicioso), importación y exportación de .ics (caso semanal, TZID/UTC, archivo malformado, límite de 2 MB y confirmación en la interfaz), introducción de 3 pasos (solo la primera vez, Saltar y repetirla desde Ajustes), funcionamiento sin conexión, cifrado, Amigos (con Supabase simulado mediante page.route(), incluida una comprobación de que nunca se envían datos de bienestar) y el modo demo sin red.
+Las pruebas abren la app en Chromium y recorren los flujos reales: navegación por secciones y URL (incluida Herramientas), modo Calma predeterminado para perfiles nuevos, migración de perfiles existentes a HUD, capacidad y plan, modo de energía baja, semanas críticas, reprogramación, alertas, consentimiento, calculadora de notas (caso normal, ya aprobado, meta alta, ponderaciones que no suman 100 %, redondeo 3,95 → 4,0, coma decimal y próxima evaluación), Pomodoro (retoma tras recargar y descanso largo después de 4 focos), flashcards (importación con tabulación y con ` ; `, avance de cajas y fechas Leitner), modo certamen (plan de 7 días, compresión a 3 días, energía baja con prioridad y aviso sin culpa, dos evaluaciones repartiendo capacidad y salida del modo), Arvis (energía 5 y 1, sin check-in con enlace a Bienestar, interruptor de Ajustes, celebración, foco, alerta, estados vacíos y avatar de ayuda), lectura de un PDF, respaldo y restauración (incluidos los campos nuevos y un archivo malicioso), importación y exportación de .ics (caso semanal, TZID/UTC, archivo malformado, límite de 2 MB y confirmación en la interfaz), ausencia de introducción (y respaldos antiguos con esos campos, que se ignoran), botón de ejemplo en Ramos y Syllabus, consentimiento en Bienestar, funcionamiento sin conexión, cifrado, Amigos (con Supabase simulado mediante page.route(), incluida una comprobación de que nunca se envían datos de bienestar) y el modo demo sin red.
 
 `ash
 npm install

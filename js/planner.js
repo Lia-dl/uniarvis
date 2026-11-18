@@ -47,9 +47,11 @@ function replanAll(){                                   // reprogramación sin c
   inval();const t0=today();
   const stale=S.tasks.filter(t=>!t.done&&t.date<t0).length;
   if(stale>0)S.moved={date:t0,n:stale};
+  const certKeep=S.tasks.filter(t=>t.certamen);
   S.tasks=S.tasks.filter(t=>t.done);
   let over=0;
-  S.events.filter(e=>e.date>=t0).sort((a,b)=>a.date.localeCompare(b.date)).forEach(e=>over+=planEvent(e));
+  S.events.filter(e=>e.date>=t0&&!certPlans().some(p=>p.eventId===e.id)).sort((a,b)=>a.date.localeCompare(b.date)).forEach(e=>over+=planEvent(e));
+  if(certPlans().length)buildCertamenTasks(t0,certKeep);
   S.lastPlan=t0;save();
   if(over)toast('Esos días quedaron muy cargados: repartí lo más parejo posible. Quizá conviene mover alguna fecha o pedir ayuda.');
 }
@@ -91,4 +93,112 @@ function criticalHtml(){
       <div class="row" style="margin-top:8px">${allEarly?'':`<button class="btn" onclick="applyEarly('${ids}')">Reservar margen extra</button>`}
       ${low?`<button class="btn sec" onclick="go('apoyo')">Ver apoyo</button>`:''}</div></div>`;
   }).join('');
+}
+
+const CERT_PHASES={teoria:'Repaso de teoría',ejercicios:'Ejercicios por tema',ensayo:'Ensayo cronometrado',errores:'Revisión de errores',repaso:'Repaso ligero de errores'};
+let certDraft=null;
+const certPlans=()=>S.certamen&&Array.isArray(S.certamen.plans)?S.certamen.plans:[];
+const certIsExam=e=>e.type==='evaluacion'||e.type==='control'||(e.type==='otro'&&/(prueba|certamen|examen|control)/.test(norm(e.title)));
+const certCandidates=()=>S.events.filter(e=>certIsExam(e)&&e.date>today()&&diffDays(today(),e.date)<=7&&!certPlans().some(p=>p.eventId===e.id)).sort((a,b)=>a.date.localeCompare(b.date));
+function certamenRememberSyllabus(courseId,text){
+  if(!S.certamen||!S.certamen.topicsByCourse)return;
+  const out=[];
+  String(text||'').split(/\r?\n/).forEach(raw=>{
+    const line=raw.replace(/\s+/g,' ').trim();
+    const m=line.match(/^(?:(?:tema|unidad|módulo|modulo|capítulo|capitulo|contenido)\s*[:.\-–—]?\s*|(\d+[.)])\s*)(.+)$/i);
+    if(!m||!m[2])return;
+    const name=m[2].trim();
+    if(name.length<4||name.length>80||/\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+de\s+[a-z]/i.test(name))return;
+    if(!out.some(x=>norm(x)===norm(name)))out.push(name);
+  });
+  S.certamen.topicsByCourse[courseId]=out.slice(0,20);
+}
+const certamenSuggestions=courseId=>((S.certamen&&S.certamen.topicsByCourse&&S.certamen.topicsByCourse[courseId])||[]).slice();
+function openCertamen(eventId){
+  const ev=S.events.find(e=>e.id===eventId);if(!ev||!certIsExam(ev))return;
+  const topics=certamenSuggestions(ev.courseId);
+  certDraft={eventId:eventId,mockMin:Number.isFinite(ev.mockMin)?clamp(ev.mockMin,30,240):90,
+    topics:(topics.length?topics:['']).slice(0,8).map(name=>({id:uid(),name:String(name).slice(0,80),hard:false}))};
+  render();
+}
+function certAddTopic(){if(certDraft)certDraft.topics.push({id:uid(),name:'',hard:false});render()}
+function certRemoveTopic(id){if(certDraft)certDraft.topics=certDraft.topics.filter(t=>t.id!==id);render()}
+function certSetTopic(id,k,v){const t=certDraft&&certDraft.topics.find(x=>x.id===id);if(t){if(k==='name')t.name=String(v).slice(0,80);else t.hard=!!v}if(k!=='name')render()}
+function certSetMock(v){const n=parseInt(v,10);if(certDraft)certDraft.mockMin=Number.isInteger(n)?clamp(n,30,240):90;render()}
+function certCancelDraft(){certDraft=null;render()}
+function activateCertamen(){
+  if(!certDraft)return;
+  const ev=S.events.find(e=>e.id===certDraft.eventId);if(!ev)return;
+  const topics=certDraft.topics.filter(t=>String(t.name||'').trim()).map(t=>({id:t.id,name:String(t.name).trim().slice(0,80),hard:!!t.hard}));
+  if(!topics.length)return toast('Escribe al menos un tema que entre en la evaluación.');
+  S.certamen.plans=S.certamen.plans.filter(p=>p.eventId!==ev.id);
+  S.certamen.plans.push({eventId:ev.id,courseId:ev.courseId,title:ev.title,date:ev.date,mockMin:certDraft.mockMin||90,topics:topics,leftOut:[]});
+  certDraft=null;replanAll();render();
+  toast('Modo certamen activo: reemplacé las micro-tareas sueltas por un plan por fases.');
+}
+function exitCertamen(eventId){
+  S.certamen.plans=S.certamen.plans.filter(p=>p.eventId!==eventId);
+  S.tasks=S.tasks.filter(t=>!(t.certamen&&t.eventId===eventId&&!t.done));
+  replanAll();render();
+  toast('Saliste del modo certamen: volviste a las micro-tareas normales.');
+}
+function certShare(date,plan,plans){
+  const ev=S.events.find(e=>e.id===plan.eventId);if(!ev)return 1;
+  const mates=plans.map(p=>S.events.find(e=>e.id===p.eventId)).filter(e=>e&&e.date>=today()&&
+    (mondayOf(e.date)===mondayOf(ev.date)||diffDays(e.date,ev.date)<=4));
+  if(mates.length<2)return 1;
+  const weight=e=>{const c=course(e.courseId),d=c?c.difficulty:3;return d+(7-clamp(diffDays(today(),e.date),0,7))*0.5};
+  const total=mates.reduce((a,e)=>a+weight(e),0);
+  return total?weight(ev)/total:1;
+}
+function buildCertamenTasks(t0,previous){
+  S.tasks=S.tasks.filter(t=>!t.certamen||t.done);
+  const done=new Set((previous||[]).filter(t=>t.certamen&&t.done).map(t=>t.eventId+'|'+(t.topicId||'')+'|'+t.phase));
+  const plans=certPlans().filter(p=>p.date>t0&&S.events.some(e=>e.id===p.eventId));
+  const blocks=[];
+  plans.forEach(p=>{
+    p.leftOut=[];
+    const N=clamp(diffDays(t0,p.date),1,7),topics=[...p.topics].sort((a,b)=>(b.hard?1:0)-(a.hard?1:0));
+    const offset=o=>clamp(Math.ceil(o*N/7),2,N);
+    const put=(n,minutes,phase,topic,priority)=>{
+      if(done.has(p.eventId+'|'+(topic?topic.id:'')+'|'+phase))return;
+      blocks.push({plan:p,date:addDays(p.date,-n),minutes,phase,topic,priority,
+        title:`${CERT_PHASES[phase]} · ${topic?topic.name:p.title}`});
+    };
+    if(N>=3)topics.forEach((t,i)=>put(offset(7-Math.min(i,2)),25,'teoria',t,(t.hard?50:30)+i));
+    if(N>=2)topics.forEach((t,i)=>put(offset(4-Math.min(i,1)),25,'ejercicios',t,(t.hard?80:60)+i));
+    put(N>=2?2:1,p.mockMin,'ensayo',null,100);
+    put(N>=2?2:1,15,'errores',null,90);
+    const rev=topics.slice(0,Math.min(3,Math.floor(45/15)));
+    const each=Math.floor(45/rev.length/5)*5,extra=Math.round((45-each*rev.length)/5);
+    rev.forEach((t,i)=>put(1,each+(i<extra?5:0),'repaso',t,(t.hard?70:40)+i));
+    if(N<3)topics.forEach(t=>p.leftOut.push({label:`${CERT_PHASES.teoria} · ${t.name}`,minutes:25}));
+    if(N<2)topics.forEach(t=>p.leftOut.push({label:`${CERT_PHASES.ejercicios} · ${t.name}`,minutes:25}));
+  });
+  const byDate={};
+  blocks.forEach(b=>{(byDate[b.date]=byDate[b.date]||[]).push(b)});
+  const dates=Object.keys(byDate).sort();
+  const roomFor=(date,b)=>{
+    const cap=planCap(date),share=certShare(date,b.plan,plans);
+    const limit=Math.max(15,Math.min(cap,Math.floor(cap*share/15)*15));
+    return {limit,fit:Math.min(b.minutes,Math.floor(Math.max(0,limit-dayLoad(date))/5)*5)};
+  };
+  const place=b=>{
+    let target=b.date;
+    if(b.phase==='ensayo'&&roomFor(target,b).fit<b.minutes){
+      const last=addDays(b.plan.date,-1);
+      for(let d=addDays(target,1);d<=last;d=addDays(d,1))if(roomFor(d,b).fit>=b.minutes){target=d;break}
+    }
+    const {fit}=roomFor(target,b);
+    if(fit<15||(b.phase==='ensayo'&&fit<b.minutes)){b.plan.leftOut.push({label:b.title,minutes:b.minutes});return}
+    S.tasks.push({id:uid(),eventId:b.plan.eventId,courseId:b.plan.courseId,title:b.title,date:target,minutes:fit,done:false,
+      certamen:true,phase:b.phase,topicId:b.topic?b.topic.id:''});
+  };
+  const first=b=>b.phase==='ensayo'||b.phase==='errores';
+  dates.forEach(date=>byDate[date].filter(first).sort((a,b)=>b.priority-a.priority).forEach(place));
+  dates.forEach(date=>byDate[date].filter(b=>!first(b)).sort((a,b)=>b.priority-a.priority).forEach(place));
+  plans.forEach(p=>{
+    const seen=new Set();
+    p.leftOut=p.leftOut.filter(x=>{const k=x.label+'|'+x.minutes;if(seen.has(k))return false;seen.add(k);return true});
+  });
 }

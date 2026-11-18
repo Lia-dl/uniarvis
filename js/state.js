@@ -65,7 +65,7 @@ function cleanTools(t){
 }
 const migrateTools=t=>cleanTools(t);
 const fresh=()=>({courses:[],classes:[],events:[],tasks:[],sessions:[],settings:{min:60,theme:'cian',mode:'light',style:'calma',arvis:true},lastPlan:null,
-  wellbeing:{diary:[]},frases:{favs:[]},createdAt:today(),lastBackup:null,backupSnooze:null,consent:null,soft:null,adapt:null,moved:null,dismissed:{},support:{name:'',contact:''},profile:{name:'',career:'',onboarded:false},intro:{status:'pending',at:null},tools:freshTools()});
+  wellbeing:{diary:[]},frases:{favs:[]},createdAt:today(),lastBackup:null,backupSnooze:null,consent:null,soft:null,adapt:null,moved:null,dismissed:{},support:{name:'',contact:''},profile:{name:'',career:''},certamen:{plans:[],topicsByCourse:{}},tools:freshTools()});
 function migrate(s){
   const f=fresh();for(const k in f)if(s[k]===undefined)s[k]=f[k];
   if(!s.wellbeing||!Array.isArray(s.wellbeing.diary))s.wellbeing={diary:[]};
@@ -81,11 +81,13 @@ function migrate(s){
   delete s.reviews;                               // reseñas de texto libre de versiones anteriores: ya no se guardan
   delete s.ratings;                               // aportes anónimos de ramos de versiones anteriores: ya no se guardan
   if(s.wellbeing)delete s.wellbeing.practices;
-  if(!s.profile||typeof s.profile!=='object')s.profile={name:'',career:'',onboarded:false};
+  if(!s.certamen||typeof s.certamen!=='object'||Array.isArray(s.certamen))s.certamen={plans:[],topicsByCourse:{}};
+  if(!Array.isArray(s.certamen.plans))s.certamen.plans=[];
+  if(!s.certamen.topicsByCourse||typeof s.certamen.topicsByCourse!=='object'||Array.isArray(s.certamen.topicsByCourse))s.certamen.topicsByCourse={};
+  if(!s.profile||typeof s.profile!=='object')s.profile={name:'',career:''};
   if(s.profile.name==null)s.profile.name=''; if(s.profile.career==null)s.profile.career='';
-  if(typeof s.profile.onboarded!=='boolean')s.profile.onboarded=!!(s.profile.name);
-  if(!s.intro||typeof s.intro!=='object'||Array.isArray(s.intro))s.intro={status:(Array.isArray(s.courses)&&s.courses.length)?'done':'pending',at:null};
-  if(['pending','done','skipped'].indexOf(s.intro.status)<0)s.intro.status='pending';
+  delete s.profile.onboarded;                  // introducción eliminada: se ignora en perfiles y respaldos antiguos
+  delete s.intro;
   if(Array.isArray(s.courses))s.courses.forEach(c=>{
     if(!Array.isArray(c.grades))c.grades=[];
     if(typeof c.share!=='boolean')c.share=false;
@@ -113,16 +115,4 @@ const cname=id=>course(id)?course(id).name:'(ramo eliminado)';
 const ccolor=id=>course(id)?course(id).color:'#6b7384';
 
 let section='inicio',tab='inicio',weekStart=mondayOf(today()),pending=[],sylText='',sylCourse='',draft=null,ciEdit=false,bsel='larga',bt=null,mt=null;
-let icsPending=null,icsNotice='',icsEvaluations=[],introStep=1,introForced=false;
-function introActive(){
-  if(!S.profile||!S.profile.onboarded||LOCKED)return false;
-  if(!S.intro||S.intro.status!=='pending')return false;
-  return introForced||!S.courses.length;
-}
-function introMark(status){
-  S.intro={status:status,at:today()};introStep=1;introForced=false;save();
-}
-function introFinish(status){
-  introMark(status);render();
-  if(typeof maybeShowTour==='function')maybeShowTour();
-}
+let icsPending=null,icsNotice='',icsEvaluations=[];

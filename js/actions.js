@@ -64,7 +64,7 @@ function registerProfile(){
   const n=($('#reg-name')||{}).value||'',c=($('#reg-career')||{}).value||'';
   const name=String(n).trim(),career=String(c).trim();
   if(!name||!career)return toast('Ingresa tu nombre y carrera.');
-  S.profile={name:name.slice(0,60),career:career.slice(0,80),onboarded:true};
+  S.profile={name:name.slice(0,60),career:career.slice(0,80)};
   save();toast(`Bienvenido/a, ${S.profile.name}.`);render();
   if(typeof maybeShowTour==='function')maybeShowTour();
 }
@@ -72,31 +72,8 @@ function saveProfile(){
   const n=($('#pf-name')||{}).value||'',c=($('#pf-career')||{}).value||'';
   const name=String(n).trim(),career=String(c).trim();
   if(!name||!career)return toast('Ingresa tu nombre y carrera.');
-  S.profile={name:name.slice(0,60),career:career.slice(0,80),onboarded:true};
+  S.profile={name:name.slice(0,60),career:career.slice(0,80)};
   save();toast('Perfil actualizado.');render();
-}
-function introAddCourse(){
-  const n=(($('#ob-cn')||{}).value||'').trim();if(!n)return toast('Escribe el nombre del ramo.');
-  S.courses.push({id:uid(),name:n.slice(0,80),difficulty:parseInt(($('#ob-cd')||{}).value,10)||3,color:COLORS[S.courses.length%COLORS.length],grades:[]});
-  introMark('done');toast('Ramo agregado. Ya puedes seguir con tu horario en Mis ramos y horario.');render();
-}
-function introAddClass(){
-  const c=($('#ob-kc')||{}).value,d=+($('#ob-kd')||{}).value,a=($('#ob-ka')||{}).value,b=($('#ob-kb')||{}).value;
-  if(!c||!a||!b||toMin(b)<=toMin(a))return toast('Revisa ramo y horas.');
-  S.classes.push({id:uid(),courseId:c,day:d,start:a,end:b});
-  introMark('done');replanAll();toast('Clase agregada al horario.');render();
-}
-function introNext(){if(introStep<3){introStep++;render()}}
-function introPrev(){if(introStep>1){introStep--;render()}}
-async function introConsent(v){
-  introMark('done');
-  await setConsent(v);
-  toast(v?'Check-in activado. Puedes cambiarlo cuando quieras en Ajustes → Privacidad.':'Sin check-in la app igual funciona y calcula tu capacidad con tus clases.');
-}
-function restartIntro(){
-  introStep=1;introForced=true;
-  S.intro={status:'pending',at:null};save();go('inicio');
-  toast('Introducción reiniciada.');
 }
 function addCourse(){
   const n=$('#cn').value.trim();if(!n)return;
@@ -210,9 +187,6 @@ function validState(j){
     if(j.profile.name!==undefined&&!str(j.profile.name,60))return 'perfil';
     if(j.profile.career!==undefined&&!str(j.profile.career,80))return 'perfil';
   }
-  if(j.intro!==undefined){
-    if(!j.intro||typeof j.intro!=='object'||Array.isArray(j.intro)||['pending','done','skipped'].indexOf(j.intro.status)<0)return 'introducción';
-  }
   if(j.settings!==undefined){
     if(!j.settings||typeof j.settings!=='object'||Array.isArray(j.settings))return 'ajustes';
     if(j.settings.arvis!==undefined&&typeof j.settings.arvis!=='boolean')return 'ajustes';
@@ -226,6 +200,19 @@ function validState(j){
   if(j.frases!==undefined){
     if(!j.frases||typeof j.frases!=='object'||Array.isArray(j.frases)||!Array.isArray(j.frases.favs))return 'frases';
     for(const id of j.frases.favs)if(typeof id!=='string'||!FRASES.some(f=>f.id===id))return 'frases';
+  }
+  if(j.certamen!==undefined){
+    if(!j.certamen||typeof j.certamen!=='object'||Array.isArray(j.certamen)||!Array.isArray(j.certamen.plans))return 'modo certamen';
+    for(const p of j.certamen.plans){
+      if(!(p&&RX.id.test(p.eventId)&&RX.id.test(p.courseId)&&str(p.title,200)&&RX.date.test(p.date)&&int(p.mockMin,30,240)&&Array.isArray(p.topics)))return 'modo certamen';
+      for(const t of p.topics)if(!(t&&RX.id.test(t.id)&&str(t.name,80)&&typeof t.hard==='boolean'))return 'modo certamen';
+      if(p.leftOut!==undefined&&(!Array.isArray(p.leftOut)||p.leftOut.some(x=>!(x&&str(x.label,300)&&int(x.minutes,0,600)))))return 'modo certamen';
+    }
+    if(j.certamen.topicsByCourse!==undefined){
+      const m=j.certamen.topicsByCourse;
+      if(!m||typeof m!=='object'||Array.isArray(m))return 'modo certamen';
+      for(const k of Object.keys(m))if(!RX.id.test(k)||!Array.isArray(m[k])||m[k].some(x=>!str(x,80)))return 'modo certamen';
+    }
   }
   return null;
 }
@@ -244,8 +231,18 @@ function cleanState(j){
   c.support={name:String((j.support&&j.support.name)||'').slice(0,120),contact:String((j.support&&j.support.contact)||'').slice(0,300)};
   c.consent=j.consent&&typeof j.consent.health==='boolean'?{health:j.consent.health,at:today()}:null;
   c.lastBackup=typeof j.lastBackup==='string'&&RX.date.test(j.lastBackup)?j.lastBackup:null;
-  if(j.profile&&typeof j.profile==='object')c.profile={name:String(j.profile.name||'').slice(0,60),career:String(j.profile.career||'').slice(0,80),onboarded:!!j.profile.onboarded||(!!j.profile.name)};
-  if(j.intro&&['pending','done','skipped'].indexOf(j.intro.status)>=0)c.intro={status:j.intro.status,at:RX.date.test(j.intro.at)?j.intro.at:null};
+  if(j.profile&&typeof j.profile==='object')c.profile={name:String(j.profile.name||'').slice(0,60),career:String(j.profile.career||'').slice(0,80)};
+  c.certamen={plans:[],topicsByCourse:{}};
+  const cp=j.certamen&&j.certamen;
+  if(cp&&Array.isArray(cp.plans))c.certamen.plans=cp.plans.filter(p=>p&&j.events.some(e=>e.id===p.eventId)).map(p=>({
+    eventId:p.eventId,courseId:p.courseId,title:String(p.title||'').slice(0,200),date:p.date,
+    mockMin:Number.isInteger(p.mockMin)&&p.mockMin>=30&&p.mockMin<=240?p.mockMin:90,
+    topics:(p.topics||[]).map(t=>({id:RX.id.test(t.id)?t.id:uid(),name:String(t.name||'').slice(0,80),hard:t.hard===true})),
+    leftOut:(p.leftOut||[]).filter(x=>x&&typeof x.label==='string').map(x=>({label:x.label.slice(0,300),minutes:Number.isInteger(x.minutes)&&x.minutes>=0&&x.minutes<=600?x.minutes:0}))
+  }));
+  if(cp&&cp.topicsByCourse&&typeof cp.topicsByCourse==='object')Object.keys(cp.topicsByCourse).forEach(k=>{
+    if(RX.id.test(k))c.certamen.topicsByCourse[k]=cp.topicsByCourse[k].slice(0,20).map(x=>String(x||'').slice(0,80));
+  });
   return c;
 }
 const int15=v=>Number.isInteger(v)&&v>=15&&v<=240;
@@ -322,7 +319,6 @@ function confirmICS(){
     S.classes.push({id:uid(),courseId:cid,day:b.day,start:b.start,end:b.end});added++;
   });
   icsPending=null;icsNotice='';icsEvaluations=[];
-  if(introActive())introMark('done');
   if(added||created){save();replanAll();toast(`${added} clase(s) agregadas${created?` y ${created} ramo(s) creados`:''}.`)}
   render();
 }
@@ -334,8 +330,7 @@ async function loadDemo(){
   if(S.courses.length&&!await askConfirm({title:'Cargar datos de ejemplo',text:'Esto reemplazará tus datos actuales por los del ejemplo.',okLabel:'Cargar'}))return;
   const perfil=S.profile;
   S=fresh();inval();const t=today();
-  if(perfil&&perfil.onboarded)S.profile=perfil;
-  S.intro={status:'done',at:t};                     // quien ve el ejemplo ya conoce la app
+  if(perfil&&perfil.name)S.profile=perfil;
   S.consent={health:true,at:t};                    // el ejemplo activa el check-in para poder probarlo
   const C0=(n,d,i)=>({id:uid(),name:n,difficulty:d,color:COLORS[i]});
   const cs=[C0('Cálculo III',5,0),C0('Termodinámica',4,1),C0('Estadística',3,2),C0('Economía',2,3)];
@@ -367,4 +362,18 @@ function setStyle(id){
 }
 function setArvis(on){
   S.settings.arvis=!!on;save();render();
+}
+function openCourseFlashcards(courseId){
+  const F=(S.tools&&S.tools.flashcards)||freshFlashcards();
+  const d=F.decks.find(x=>x.courseId===courseId);
+  if(!d)return toast('Ese ramo aún no tiene mazos de flashcards.');
+  setActiveFlashcardDeck(d.id);go('herramientas');
+}
+function startCertPomodoro(eventId,taskId){
+  const t=S.tasks.find(x=>x.id===taskId&&x.certamen&&x.eventId===eventId&&!x.done);if(!t)return;
+  if(t.date>today()){
+    if(dayLoad(today())+t.minutes>capFor(today()))return toast('Hoy no cabe ese bloque: se priorizó lo que ya está en tu plan.');
+    t.date=today();save();
+  }
+  pomSetTarget('task:'+t.id);go('herramientas');pomStart();
 }

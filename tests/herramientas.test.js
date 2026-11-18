@@ -15,7 +15,7 @@ const path=require('path');
     await p.locator('.hud-btn').click();
   }
   await p.evaluate(()=>{
-    S=fresh();S.profile={name:'Prueba',career:'Carrera',onboarded:true};
+    S=fresh();S.profile={name:'Prueba',career:'Carrera'};
     S.courses=[{id:'c1',name:'Cálculo',difficulty:3,color:'#3b6df0',grades:[],share:false,passGrade:4,roundFinal:true}];
     S.events.push({id:'e1',courseId:'c1',title:'Certamen',date:today(),type:'evaluacion'});
     S.tasks=[{id:'t1',eventId:'e1',courseId:'c1',title:'Repasar derivadas',date:today(),minutes:25,done:false}];

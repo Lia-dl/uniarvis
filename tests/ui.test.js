@@ -50,6 +50,7 @@ const fs=require('fs');
   await onboard();
   t=await p.textContent('#app');
   ok('tras el perfil la app se muestra sin pedir consentimiento',!t.includes('Antes de empezar')&&t.includes('Elige por dónde empezar hoy'));
+  ok('no hay introducción de 3 pasos',await p.locator('#onboarding').count()===0&&!t.includes('1/3'));
   const orden=await p.evaluate(()=>[...document.querySelectorAll('.home-card .home-copy b')].map(x=>x.textContent));
   ok('inicio ordena Bienestar, Académico, Planificación, Social y Ajustes',orden.join(',')==='Bienestar,Académico,Planificación,Social,Ajustes',orden.join(','));
   await open('Bienestar','Check-in');
@@ -90,6 +91,7 @@ const fs=require('fs');
   await open('Ajustes','Apariencia');
   ok('el panel ofrece estilos, 8 colores y 2 modos',await p.locator('.swatch').count()===8&&await p.locator('.mode-btn').count()===4);
   ok('el estilo HUD sigue disponible',(await p.textContent('#app')).includes('HUD'));
+  ok('Apariencia ya no ofrece repetir la introducción',!(await p.textContent('#app')).includes('Ver la introducción de nuevo'));
   await p.locator('.swatch').filter({hasText:'Morado'}).click();
   await p.locator('.mode-btn').filter({hasText:'Claro'}).click();
   const th=await p.evaluate(()=>({accent:document.documentElement.getAttribute('data-accent'),mode:document.documentElement.getAttribute('data-mode'),theme:S.settings.theme,modeS:S.settings.mode}));
@@ -135,6 +137,10 @@ const fs=require('fs');
   await open('Ajustes','Datos de ejemplo');
   await p.click('text=Cargar datos de ejemplo');
   await onboard();
+  await open('Académico','Mis ramos y horario');
+  ok('Ramos mantiene visible Cargar datos de ejemplo',await p.locator('[data-focus-id="load-demo"]').count()===1);
+  await open('Académico','Syllabus y fechas');
+  ok('Syllabus mantiene visible Cargar datos de ejemplo',await p.locator('[data-focus-id="load-demo"]').count()===1);
   await open('Planificación','Hoy');
   const base=await p.evaluate(()=>({tasks:S.tasks.length,sizes:[...new Set(S.tasks.map(t=>t.minutes))].sort((a,b)=>a-b),
     cap:capFor(today()),min:minFor(today())}));
@@ -280,14 +286,16 @@ const fs=require('fs');
   await p.evaluate(()=>{localStorage.setItem('entrenador-academico-v1',JSON.stringify({courses:[{id:'c1',name:'Cálculo',difficulty:3,color:'#3b6df0'}],
     classes:[],events:[],tasks:[],sessions:[],reviews:[{id:'r',courseId:'c1',cat:'cuello',src:'Docente',text:'texto libre',votes:1}],
     ratings:[{id:'v',course:'Cálculo',load:5,diff:5,evalType:'certamenes',hours:12}],
+    profile:{name:'Ana',career:'Medicina',onboarded:true},intro:{status:'pending',at:null},
     settings:{min:90,max:240},lastPlan:null,wellbeing:{diary:[{date:'2026-10-27',mood:2,tags:['Estrés'],note:'hola',ts:1}],practices:[]}}))});
   await p.reload();
-  const mg=await p.evaluate(()=>({reviews:('reviews' in S),ratings:('ratings' in S),consent:S.consent,courses:S.courses.length,min:S.settings.min,mode:S.settings.mode,attr:document.documentElement.getAttribute('data-mode'),style:S.settings.style,styleAttr:document.documentElement.getAttribute('data-style')}));
+  const mg=await p.evaluate(()=>({reviews:('reviews' in S),ratings:('ratings' in S),consent:S.consent,courses:S.courses.length,min:S.settings.min,mode:S.settings.mode,attr:document.documentElement.getAttribute('data-mode'),style:S.settings.style,styleAttr:document.documentElement.getAttribute('data-style'),profile:S.profile.name,intro:('intro' in S),onboarded:('onboarded' in S.profile)}));
   ok('migración conserva ramos y mínimo',mg.courses===1&&mg.min===90,JSON.stringify(mg));
   ok('migración elimina reseñas y aportes antiguos',!mg.reviews&&!mg.ratings);
   ok('migración deja el check-in sin consentir',mg.consent===null);
   ok('migración usa modo claro',mg.mode==='light'&&mg.attr==='light',JSON.stringify(mg));
   ok('migración conserva estilo HUD para perfiles existentes',mg.style==='hud'&&mg.styleAttr==='hud',JSON.stringify(mg));
+  ok('respaldo antiguo con introducción se restaura e ignora esos campos',mg.profile==='Ana'&&!mg.intro&&!mg.onboarded,JSON.stringify(mg));
 
   // 13. Todas las pestañas renderizan sin errores
   await p.evaluate(()=>{S=fresh();save()});await p.reload();

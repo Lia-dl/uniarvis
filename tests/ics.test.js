@@ -98,7 +98,7 @@ END:VCALENDAR\r
 `;
   const icsPath=path.join(tmp,'horario.ics');fs.writeFileSync(icsPath,uiIcs,'utf8');
   await p.evaluate(()=>{
-    S=fresh();S.profile={name:'Ana',career:'Medicina',onboarded:true};S.intro={status:'done',at:today()};
+    S=fresh();S.profile={name:'Ana',career:'Medicina'};
     S.courses=[{id:'c1',name:'Cálculo',difficulty:3,color:'#3b6df0',grades:[]}];save();go('ramos');
   });
   ok('alta manual: aparece "Importar desde calendario (.ics)"',(await p.textContent('#app')).includes('Importar desde calendario (.ics)'));

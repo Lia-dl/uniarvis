@@ -53,7 +53,7 @@ function mobileNavHtml(){
   return `<nav class="mobile-nav" aria-label="Secciones">${items}</nav>`;
 }
 function render(){
-  const key=LOCKED?'lock':(!S.profile||!S.profile.onboarded?'landing':section+'/'+tab);
+  const key=LOCKED?'lock':(!S.profile||!S.profile.name?'landing':section+'/'+tab);
   const same=key===lastRenderKey;
   const active=document.activeElement;
   const focus=active&&active!==document.body?{id:active.id||'',data:(active.dataset&&active.dataset.focusId)||''}:null;
@@ -88,7 +88,7 @@ function render(){
     let mob=$('#mobile-nav');if(mob)mob.remove();
     app.innerHTML=lockView();finish($('#lp'));return;
   }
-  if(!S.profile||!S.profile.onboarded){
+  if(!S.profile||!S.profile.name){
     document.body.classList.add('landing-active');$('#nav').innerHTML='';
     let mob=$('#mobile-nav');if(mob)mob.remove();
     app.innerHTML=viewLanding();finish($('#reg-name'));return;
@@ -123,7 +123,7 @@ function checkNewDay(previous){
   const prev=previous||lastPlanDay,d=today();
   if(prev===d)return false;
   lastPlanDay=d;
-  if(LOCKED||!S.profile||!S.profile.onboarded||!S.courses.length||S.lastPlan===d)return false;
+  if(LOCKED||!S.profile||!S.profile.name||!S.courses.length||S.lastPlan===d)return false;
   replanAll();
   toast('Es un nuevo día: reorganicé lo pendiente para que no se acumule.');
   render();

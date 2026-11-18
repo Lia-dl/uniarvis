@@ -3,7 +3,7 @@ let tourIndex=0;
 
 function screenHelp(key){
   if(typeof LOCKED!=='undefined'&&LOCKED)return '';
-  if(typeof S!=='undefined'&&S.profile&&!S.profile.onboarded)return '';
+  if(typeof S!=='undefined'&&S.profile&&!S.profile.name)return '';
   if(typeof AYUDA==='undefined'||!AYUDA[key])return '';
   return `<div class="help-bar"><button class="help-btn" type="button" title="Ayuda" aria-label="Ayuda" onclick="openHelp('${key}')">?</button></div>`;
 }
@@ -63,8 +63,7 @@ function finishTour(){
 }
 
 function maybeShowTour(){
-  if(typeof S==='undefined'||!S.profile||!S.profile.onboarded)return;
-  if(typeof introActive==='function'&&introActive())return;
+  if(typeof S==='undefined'||!S.profile||!S.profile.name)return;
   if(typeof LOCKED!=='undefined'&&LOCKED)return;
   const root=document.getElementById('tour-root');
   if(root&&root.innerHTML.trim())return;
