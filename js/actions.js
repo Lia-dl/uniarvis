@@ -1,5 +1,11 @@
 /* Entrenador Académico · Acciones del usuario, datos anónimos de ramos, privacidad y datos de ejemplo */
 /* ===================== Acciones ===================== */
+function undoable(msg,mutate,after){
+  const snap=JSON.stringify(S);
+  mutate();if(after)after();
+  save();render();
+  toast(msg,()=>{S=JSON.parse(snap);save();loadDraft();render();toast('Acción deshecha.')});
+}
 function go(t,fromRoute){
   stopBreath(true);stopMed(true);
   const r=typeof routeFor==='function'?routeFor(t):{section:'inicio',tab:'inicio'};
@@ -10,7 +16,6 @@ function go(t,fromRoute){
   }
   render();
   if(tab==='amigos'&&typeof socialOpenTab==='function')socialOpenTab();
-  try{window.scrollTo(0,0)}catch(e){}
 }
 function goBreath(k){stopBreath(true);stopMed(true);bsel=k;go('respiracion');startBreath()}
 function goMed(id){stopBreath(true);stopMed(true);go('respiracion');startMed(id)}
@@ -83,7 +88,7 @@ function addGrade(cid){
   c.grades.push({id:uid(),name:name.slice(0,80),score:Math.round(score*100)/100,weight:Math.round(weight*100)/100});
   save();render();
 }
-function delGrade(cid,gid){const c=course(cid);if(!c)return;c.grades=(c.grades||[]).filter(g=>g.id!==gid);save();render()}
+function delGrade(cid,gid){const c=course(cid);if(!c)return;undoable('Nota eliminada.',()=>{c.grades=(c.grades||[]).filter(g=>g.id!==gid)})}
 function setGrade(cid,gid,field,val){
   const c=course(cid);if(!c)return;const g=(c.grades||[]).find(x=>x.id===gid);if(!g)return;
   if(field==='name')g.name=String(val).trim().slice(0,80);
@@ -92,23 +97,23 @@ function setGrade(cid,gid,field,val){
   save();render();
 }
 function delCourse(id){
-  if(!confirm('¿Eliminar el ramo con sus clases, fechas, tareas y notas?'))return;
-  S.courses=S.courses.filter(c=>c.id!==id);
-  ['classes','events','tasks','sessions'].forEach(k=>S[k]=S[k].filter(x=>x.courseId!==id));
-  save();render();
+  undoable('Ramo eliminado.',()=>{
+    S.courses=S.courses.filter(c=>c.id!==id);
+    ['classes','events','tasks','sessions'].forEach(k=>S[k]=S[k].filter(x=>x.courseId!==id));
+  });
 }
 function addClass(){
   const c=$('#kc').value,d=+$('#kd').value,a=$('#ka').value,b=$('#kb').value;
   if(!c||!a||!b||toMin(b)<=toMin(a))return toast('Revisa ramo y horas.');
   S.classes.push({id:uid(),courseId:c,day:d,start:a,end:b});save();replanAll();render();
 }
-function delClass(id){S.classes=S.classes.filter(x=>x.id!==id);save();replanAll();render()}
+function delClass(id){undoable('Clase eliminada.',()=>{S.classes=S.classes.filter(x=>x.id!==id)},replanAll)}
 function addEvent(){
   const c=$('#ec').value,t=$('#et').value.trim(),d=$('#ed').value,ty=$('#ey').value;
   if(!c||!t||!d)return toast('Completa ramo, título y fecha.');
   S.events.push({id:uid(),courseId:c,title:t,date:d,type:ty});replanAll();render();
 }
-function delEvent(id){S.events=S.events.filter(e=>e.id!==id);S.tasks=S.tasks.filter(t=>t.eventId!==id||t.done);save();render()}
+function delEvent(id){undoable('Fecha eliminada.',()=>{S.events=S.events.filter(e=>e.id!==id);S.tasks=S.tasks.filter(t=>t.eventId!==id||t.done)},()=>replanAll())}
 
 /* ===================== Datos anónimos y agregados de ramos ===================== */
 const EVAL_TYPES={certamenes:'Certámenes',entregas:'Entregas / proyectos',mixto:'Mixto',controles:'Controles frecuentes'};
@@ -145,9 +150,12 @@ async function importRatings(inp){
 }
 
 /* ===================== Privacidad y datos ===================== */
-async function wipe(){if(confirm('Se borrarán todos tus datos de este navegador (y se desactivará el cifrado, si lo usabas). ¿Continuar?')){await dropKey();S=fresh();save();loadDraft();render()}}
-function deleteHealth(){
-  if(!confirm('Se borrarán tus check-ins y tu diario. ¿Continuar?'))return;
+async function wipe(){
+  if(!await askConfirm({title:'Borrar todos los datos',text:'Se borrarán todos tus datos de este navegador y se desactivará el cifrado, si lo usabas. Esta acción no se puede deshacer.',okLabel:'Borrar todo',danger:true,requireWord:'BORRAR'}))return;
+  await dropKey();S=fresh();save();loadDraft();render();toast('Todos los datos de este navegador fueron borrados.');
+}
+async function deleteHealth(){
+  if(!await askConfirm({title:'Borrar datos de bienestar',text:'Se borrarán tus check-ins y tu diario de este navegador. Tu plan seguirá funcionando.',okLabel:'Borrar',danger:true}))return;
   S.wellbeing.diary=[];S.adapt=null;S.soft=null;S.dismissed={};save();loadDraft();replanAll();toast('Tus datos de bienestar fueron borrados.');render();
 }
 async function exportData(){
@@ -235,12 +243,12 @@ async function importData(inp){
     const j=JSON.parse(await f.text());
     if(j&&j.enc){                                  // respaldo cifrado: se instala tal cual y la app pedirá la contraseña
       if(!validBlob(j))throw new Error('archivo cifrado dañado');
-      if(!confirm('Este respaldo está cifrado. Se reemplazarán los datos actuales y la app te pedirá la contraseña con la que se cifró. ¿Continuar?')){inp.value='';return}
+      if(!await askConfirm({title:'Restaurar respaldo cifrado',text:'Se reemplazarán los datos actuales y la app te pedirá la contraseña con la que se cifró.',okLabel:'Restaurar'})){inp.value='';return}
       await dropKey();localStorage.setItem(KEY,JSON.stringify(j));location.reload();return;
     }
     const err=validState(j);
     if(err)throw new Error(err);
-    if(!confirm('Esto reemplazará todos los datos actuales de este navegador por los del respaldo. ¿Continuar?')){inp.value='';return}
+    if(!await askConfirm({title:'Restaurar respaldo',text:'Esto reemplazará todos los datos actuales de este navegador por los del respaldo.',okLabel:'Restaurar'})){inp.value='';return}
     S=cleanState(j);save();loadDraft();replanAll();toast('Respaldo restaurado.');render();
   }catch(e){toast('Ese archivo no parece un respaldo válido de esta app ('+e.message+').')}
   inp.value='';
@@ -269,8 +277,8 @@ function exportICS(){
 function fillUdeC(){S.support={name:'DISE UdeC · Bienestar Estudiantil',contact:'bienestar@udec.cl · dise.udec.cl'};save();toast('Guardado. Verifica horarios y cómo pedir hora en el sitio oficial.');render()}
 function saveSupport(){S.support={name:$('#sn').value.trim().slice(0,120),contact:$('#sc').value.trim().slice(0,300)};save();toast('Guardado en este navegador.');render()}
 
-function loadDemo(){
-  if(S.courses.length&&!confirm('Esto reemplazará tus datos actuales. ¿Continuar?'))return;
+async function loadDemo(){
+  if(S.courses.length&&!await askConfirm({title:'Cargar datos de ejemplo',text:'Esto reemplazará tus datos actuales por los del ejemplo.',okLabel:'Cargar'}))return;
   S=fresh();inval();const t=today();
   S.consent={health:true,at:t};                    // el ejemplo activa el check-in para poder probarlo
   const C0=(n,d,i)=>({id:uid(),name:n,difficulty:d,color:COLORS[i]});

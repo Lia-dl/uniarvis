@@ -11,10 +11,10 @@ function loadDraft(){const e=ci(today());draft=e?{energy:e.energy,mood:e.mood,sl
 function setCi(k,v){draft[k]=v;render()}
 function toggleTag(t){const i=draft.tags.indexOf(t);i<0?draft.tags.push(t):draft.tags.splice(i,1);render()}
 function editCi(){loadDraft();ciEdit=true;render()}
-function setConsent(v){
+async function setConsent(v){
   S.consent={health:v,at:today()};
   if(!v){
-    if(S.wellbeing.diary.length&&confirm('¿Quieres borrar también los check-ins y el diario que ya guardaste?\n\nAceptar = borrarlos. Cancelar = conservarlos, pero la app no los usará.'))S.wellbeing.diary=[];
+    if(S.wellbeing.diary.length&&await askConfirm({title:'Revocar consentimiento',text:'¿Quieres borrar también los check-ins y el diario que ya guardaste?\n\nAceptar = borrarlos. Cancelar = conservarlos, pero la app no los usará.',okLabel:'Borrar también',danger:true}))S.wellbeing.diary=[];
     S.adapt=null;S.soft=null;
   }
   save();loadDraft();replanAll();render();
@@ -32,7 +32,7 @@ function saveCheckin(){
   toast(low?`Hoy vamos livianos: dejé solo lo esencial y moví ${moved} micro-tarea(s) a otros días.`:`Check-in guardado. Capacidad de hoy: ${capFor(t0)} min.`);
   render();
 }
-function delDiary(date){S.wellbeing.diary=S.wellbeing.diary.filter(e=>e.date!==date);save();loadDraft();replanAll();render()}
+function delDiary(date){undoable('Registro eliminado.',()=>{S.wellbeing.diary=S.wellbeing.diary.filter(e=>e.date!==date)},()=>replanAll())}
 function dismissW(k){S.dismissed[k]=today();save();render()}
 
 /* ===================== Alertas tempranas (siempre en tono amable) ===================== */

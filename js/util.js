@@ -30,4 +30,48 @@ function applyTheme(){
   const meta=document.querySelector('meta[name="theme-color"]');
   if(meta)meta.content=st.mode==='light'?'#f4f7fb':'#050b14';
 }
-function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('on');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('on'),4500)}
+function toast(msg,undo){
+  const t=$('#toast');if(!t)return;
+  t.innerHTML='';
+  t.appendChild(document.createTextNode(String(msg)));
+  if(typeof undo==='function'){
+    const b=document.createElement('button');b.type='button';b.className='toast-undo';b.textContent='Deshacer';b.setAttribute('aria-label','Deshacer la última acción');
+    b.onclick=()=>{clearTimeout(toast.h);undo();t.classList.remove('on')};
+    t.appendChild(b);
+  }
+  t.classList.add('on');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('on'),undo?6000:4500);
+}
+let confirmResolve=null,confirmReturn=null;
+function closeConfirm(value){
+  if(confirmResolve){const done=confirmResolve;confirmResolve=null;done(!!value)}
+  const box=$('#confirm-dialog');if(box){box.hidden=true;box.innerHTML=''}
+  const back=confirmReturn;confirmReturn=null;
+  if(back&&document.contains(back))try{back.focus({preventScroll:true})}catch(e){}
+}
+function askConfirm({title='¿Confirmar?',text='',okLabel='Continuar',danger=false,requireWord=null}={}){
+  return new Promise(resolve=>{
+    if(confirmResolve)closeConfirm(false);
+    confirmResolve=resolve;confirmReturn=document.activeElement;
+    let box=$('#confirm-dialog');
+    if(!box){box=document.createElement('div');box.id='confirm-dialog';box.className='modal-backdrop';box.hidden=true;document.body.appendChild(box)}
+    const word=requireWord?`<label class="confirm-word">Para confirmar, escribe <b>${esc(requireWord)}</b><input id="confirm-word" autocomplete="off" spellcheck="false"></label>`:'';
+    box.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-text">
+      <h2 id="confirm-title">${esc(title)}</h2><p id="confirm-text">${esc(text).replace(/\n/g,'<br>')}</p>${word}
+      <div class="row"><button type="button" class="btn sec" id="confirm-cancel">Cancelar</button>
+      <button type="button" class="btn ${danger?'danger':'sec'}" id="confirm-ok" ${requireWord?'disabled':''}>${esc(okLabel)}</button></div></div>`;
+    box.hidden=false;
+    const okBtn=$('#confirm-ok'),cancelBtn=$('#confirm-cancel'),input=$('#confirm-word');
+    if(input)input.addEventListener('input',()=>{okBtn.disabled=input.value!==requireWord});
+    okBtn.onclick=()=>closeConfirm(true);cancelBtn.onclick=()=>closeConfirm(false);
+    box.onclick=e=>{if(e.target===box)closeConfirm(false)};
+    box.onkeydown=e=>{
+      if(e.key==='Escape'){e.preventDefault();closeConfirm(false);return}
+      if(e.key!=='Tab')return;
+      const f=[...box.querySelectorAll('button:not([disabled]),input:not([disabled])')];
+      if(!f.length)return;
+      if(e.shiftKey&&document.activeElement===f[0]){e.preventDefault();f[f.length-1].focus()}
+      else if(!e.shiftKey&&document.activeElement===f[f.length-1]){e.preventDefault();f[0].focus()}
+    };
+    setTimeout(()=>{try{(input||okBtn).focus({preventScroll:true})}catch(e){(input||okBtn).focus()}},0);
+  });
+}

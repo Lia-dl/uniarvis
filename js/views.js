@@ -41,7 +41,7 @@ function viewPerfil(){
     <div class="hud-form" style="max-width:520px">
       <label>Nombre<input id="pf-name" type="text" maxlength="60" value="${esc(p.name||'')}"></label>
       <label>Carrera / Programa<input id="pf-career" type="text" maxlength="80" value="${esc(p.career||'')}"></label>
-      <button class="btn" onclick="saveProfile()">Guardar cambios</button>
+      <button class="btn" data-focus-id="save-profile" onclick="saveProfile()">Guardar cambios</button>
     </div></div>`;
 }
 function consentCard(){
@@ -57,7 +57,7 @@ function consentCard(){
     <p class="mute" style="margin-bottom:0">Sin check-in la app igual funciona: calcula tu capacidad con tus clases y tu ritmo.</p></div>`;
 }
 function scaleRow(label,key,arr){
-  return `<div class="ci-row"><b>${label}</b><div class="scale">${arr.map((x,i)=>`<button class="sc ${draft[key]===i+1?'on':''}" aria-pressed="${draft[key]===i+1}" onclick="setCi('${key}',${i+1})"><span>${x[0]}</span>${x[1]}</button>`).join('')}</div></div>`;
+  return `<div class="ci-row"><b>${label}</b><div class="scale">${arr.map((x,i)=>`<button class="sc ${draft[key]===i+1?'on':''}" data-focus-id="ci-${key}-${i+1}" aria-pressed="${draft[key]===i+1}" onclick="setCi('${key}',${i+1})"><span>${x[0]}</span>${x[1]}</button>`).join('')}</div></div>`;
 }
 function checkinForm(full){
   if(!S.consent)return consentCard();
@@ -68,7 +68,7 @@ function checkinForm(full){
   return `<div class="card"><h3>Check-in de hoy <span class="mute">· 20 segundos</span></h3>
     ${scaleRow('¿Cuánta energía tienes?','energy',ENERGY)}${scaleRow('¿Cómo está tu ánimo?','mood',MOODS)}${scaleRow('¿Cuánto dormiste anoche?','sleep',SLEEP)}
     ${full?`<p class="mute" style="margin:10px 0 6px">¿Qué hay detrás? (opcional)</p>
-      <div class="row" style="gap:6px">${FEEL_TAGS.map(t=>`<button class="tag sel ${draft.tags.includes(t)?'on':''}" aria-pressed="${draft.tags.includes(t)}" onclick="toggleTag('${t}')">${t}</button>`).join('')}</div>
+      <div class="row" style="gap:6px">${FEEL_TAGS.map(t=>`<button class="tag sel ${draft.tags.includes(t)?'on':''}" data-focus-id="tag-${norm(t)}" aria-pressed="${draft.tags.includes(t)}" onclick="toggleTag('${t}')">${t}</button>`).join('')}</div>
       <textarea style="margin-top:10px" placeholder="Si quieres, escribe cómo estuvo tu día…" oninput="draft.note=this.value">${esc(draft.note)}</textarea>`:''}
     <div class="row" style="margin-top:8px"><button class="btn" onclick="saveCheckin()">${e?'Actualizar':'Guardar'} y ajustar mi plan</button>
       ${e&&ciEdit&&!full?'<button class="btn sec" onclick="ciEdit=false;render()">Cancelar</button>':''}</div>
@@ -85,9 +85,25 @@ function energyBoxes(cap,min,done){
 }
 const evDate=t=>{const e=S.events.find(x=>x.id===t.eventId);return e?e.date:'9999'};
 function taskRow(t,locked){
-  return `<div class="task ${t.done?'done':''}"><input type="checkbox" ${t.done?'checked':''} ${locked&&!t.done?'disabled':''} onchange="toggleTask('${t.id}')">
-    <span class="dot" style="background:${ccolor(t.courseId)}"></span>
+  return `<div class="task ${t.done?'done':''}"><input type="checkbox" aria-label="${t.done?'Marcar como pendiente':'Marcar como hecha'}: ${esc(t.title)}" data-focus-id="task-${t.id}" ${t.done?'checked':''} ${locked&&!t.done?'disabled':''} onchange="toggleTask('${t.id}')">
+    <span aria-hidden="true" class="dot" style="background:${ccolor(t.courseId)}"></span>
     <span class="t" style="flex:1">${esc(t.title)}<br><span class="mute">${esc(cname(t.courseId))}</span></span><span class="tag">${t.minutes} min</span></div>`;
+}
+function agendaItems(date){
+  const items=[],wd=(parse(date).getDay()+6)%7;
+  S.classes.filter(k=>k.day===wd).forEach(k=>items.push({time:k.start,order:0,
+    html:`<b>${esc(cname(k.courseId))}</b><br><span class="mute">Clase ${k.start}–${k.end}</span>`}));
+  S.events.filter(e=>e.date===date).forEach(e=>items.push({time:e.type==='evaluacion'?('9:00'):'',order:1,
+    html:`<b>${TYPE_LABEL[e.type]} · ${esc(cname(e.courseId))}</b><br><span class="mute">${esc(e.title)}</span>`}));
+  S.tasks.filter(t=>t.date===date).forEach(t=>items.push({time:'',order:2,done:t.done,
+    html:`<b>${esc(t.title)}</b><br><span class="mute">${esc(cname(t.courseId))} · ${t.minutes} min</span>`}));
+  if(typeof socialAgendaItems==='function')socialAgendaItems(date).forEach(x=>items.push(x));
+  return items.sort((a,b)=>String(a.time||'99:99').localeCompare(String(b.time||'99:99'))||a.order-b.order);
+}
+function agendaHtml(date,title){
+  const items=agendaItems(date);
+  return `<div class="card agenda-card"><h3>${esc(title)}</h3>${items.length?`<div class="agenda">${items.map(x=>
+    `<div class="agenda-item ${x.done?'done':''}"><span class="agenda-time">${x.time?esc(x.time):'—'}</span><span>${x.html}</span></div>`).join('')}</div>`:'<div class="empty">Sin compromisos ni estudio planificado.</div>'}</div>`;
 }
 function viewHoy(){
   const t0=today(),info=capInfo(t0),cap=info.val,min=minFor(t0),done=doneToday(),locked=done>=cap,met=done>=min,low=lowMode(t0);
@@ -119,6 +135,7 @@ function viewHoy(){
   ${notes.map(n=>`<div class="banner info">${n}</div>`).join('')}
   ${socialTodayHtml()}
   ${backupHtml()}
+  ${agendaHtml(t0,'Agenda de hoy')}
   <div class="card"><h2>Hoy</h2>
     <div class="stats">
       <div class="stat"><b>${done}'</b><span class="mute">estudiados hoy</span></div>
@@ -142,7 +159,7 @@ function viewHoy(){
       </div>
       <div class="card"><h3>Mi mínimo viable (día normal)</h3>
         <div class="row"><input id="smin" type="number" value="${S.settings.min}" style="width:80px"> min
-        <button class="btn sec" onclick="setMin()">Guardar</button></div>
+        <button class="btn sec" data-focus-id="set-min" onclick="setMin()">Guardar</button></div>
         <p class="mute" style="margin-bottom:0">La capacidad máxima ya no es un número fijo: se calcula cada día.</p>
       </div>
     </div>
@@ -153,9 +170,9 @@ function viewSemana(){
   const crit=criticalClusters(),isCrit=d=>crit.some(g=>d>=g.start&&d<=g.end);
   let h=`<div class="card"><div class="row" style="justify-content:space-between;margin-bottom:10px">
     <h2 style="margin:0">Semana ${dshort(days[0])} – ${dshort(days[6])}</h2>
-    <div class="row"><button class="btn sec" onclick="weekStart=addDays(weekStart,-7);render()">←</button>
+    <div class="row"><button class="btn sec" aria-label="Semana anterior" onclick="weekStart=addDays(weekStart,-7);render()">←</button>
     <button class="btn sec" onclick="weekStart=mondayOf(today());render()">Hoy</button>
-    <button class="btn sec" onclick="weekStart=addDays(weekStart,7);render()">→</button></div></div>
+    <button class="btn sec" aria-label="Semana siguiente" onclick="weekStart=addDays(weekStart,7);render()">→</button></div></div>
     <div class="mute" style="margin-bottom:8px">Subrayado ámbar = tramo exigente (3 fechas importantes en 5 días).</div>
     <div class="calwrap"><div class="cal">`;
   h+='<div class="hd"></div>'+days.map((d,i)=>`<div class="hd ${d===t0?'today':''} ${isCrit(d)?'crit':''}">${DAYS[i]} ${parse(d).getDate()}</div>`).join('');
@@ -167,7 +184,9 @@ function viewSemana(){
   h+=days.map((d,i)=>`<div class="col ${d===t0?'today':''}" style="height:${(H1-H0)*HH}px">${S.classes.filter(k=>k.day===i).map(k=>{
     const top=(toMin(k.start)-H0*60)/60*HH,ht=(toMin(k.end)-toMin(k.start))/60*HH;
     return `<div class="blk" style="top:${top}px;height:${ht}px;background:${ccolor(k.courseId)}">${esc(cname(k.courseId))}<br>${k.start}–${k.end}</div>`}).join('')}${socialWeekBlocks(d,i)}</div>`).join('');
-  return h+'</div></div></div>'+criticalHtml();
+  h+='</div></div></div>';
+  h+='<div class="agenda-movil">'+days.map((d,i)=>agendaHtml(d,`${DAYS[i]} ${parse(d).getDate()}${d===t0?' · hoy':''}`)).join('')+'</div>';
+  return h+criticalHtml();
 }
 function gradeSummary(grades){
   const gs=grades||[];let wsum=0,ws=0;gs.forEach(g=>{const w=+g.weight||0,s=+g.score||0;if(w>0){wsum+=w;ws+=s*w}});
@@ -175,40 +194,40 @@ function gradeSummary(grades){
 }
 function gradesCard(c){
   const gs=c.grades||[],sum=gradeSummary(gs);
-  const rows=gs.map(g=>`<tr><td><input value="${esc(g.name)}" onchange="setGrade('${c.id}','${g.id}','name',this.value)"></td>
-    <td><input type="number" step="0.1" style="width:90px" value="${g.score}" onchange="setGrade('${c.id}','${g.id}','score',this.value)"></td>
-    <td><input type="number" step="1" min="0" max="100" style="width:80px" value="${g.weight}" onchange="setGrade('${c.id}','${g.id}','weight',this.value)">%</td>
-    <td><button class="btn del" onclick="delGrade('${c.id}','${g.id}')">Quitar</button></td></tr>`).join('');
+  const rows=gs.map(g=>`<tr><td><input data-focus-id="grade-${c.id}-${g.id}-name" value="${esc(g.name)}" onchange="setGrade('${c.id}','${g.id}','name',this.value)"></td>
+    <td><input data-focus-id="grade-${c.id}-${g.id}-score" type="number" step="0.1" style="width:90px" value="${g.score}" onchange="setGrade('${c.id}','${g.id}','score',this.value)"></td>
+    <td><input data-focus-id="grade-${c.id}-${g.id}-weight" type="number" step="1" min="0" max="100" style="width:80px" value="${g.weight}" onchange="setGrade('${c.id}','${g.id}','weight',this.value)">%</td>
+    <td><button class="btn del" data-focus-id="del-grade-${g.id}" onclick="delGrade('${c.id}','${g.id}')">Quitar</button></td></tr>`).join('');
   return `<div class="card grades-card"><div class="row" style="justify-content:space-between;align-items:flex-start">
-      <div><h3 style="margin:0"><span class="dot" style="background:${c.color};display:inline-block;margin-right:6px"></span>${esc(c.name)}</h3>
+      <div><h3 style="margin:0"><span aria-hidden="true" class="dot" style="background:${c.color};display:inline-block;margin-right:6px"></span>${esc(c.name)}</h3>
       <div class="mute">Promedio actual (ponderado): <b class="hud-num">${sum.avg!=null?sum.avg.toFixed(2):'—'}</b> · Ponderado: ${sum.wsum}% ${sum.wsum>100?'<span style="color:var(--bad)">(&gt;100%)</span>':''} · Restante: ${Math.max(0,sum.rem)}%</div></div></div>
     ${gs.length?`<table class="grades-tbl"><tr><th>Evaluación</th><th>Nota</th><th>Pond.</th><th></th></tr>${rows}</table>`:'<div class="mute" style="margin-top:8px">Sin evaluaciones registradas.</div>'}
     <div class="row" style="margin-top:10px">
       <input id="gn-${c.id}" placeholder="Evaluación (ej. Certamen 1)">
       <input id="gs-${c.id}" type="number" step="0.1" placeholder="Nota" style="width:90px">
       <input id="gw-${c.id}" type="number" step="1" min="0" max="100" placeholder="%" style="width:80px">
-      <button class="btn sec" onclick="addGrade('${c.id}')">Agregar nota</button></div></div>`;
+      <button class="btn sec" data-focus-id="add-grade-${c.id}" onclick="addGrade('${c.id}')">Agregar nota</button></div></div>`;
 }
 function viewRamos(){
   return `
   <div class="grid2">
     <div class="card"><h2>Mis ramos</h2>
-      ${S.courses.map(c=>{const col=collective(c.name);return `<div class="task"><span class="dot" style="background:${c.color}"></span><b style="flex:1">${esc(c.name)}</b>
+      ${S.courses.map(c=>{const col=collective(c.name);return `<div class="task"><span aria-hidden="true" class="dot" style="background:${c.color}"></span><b style="flex:1">${esc(c.name)}</b>
         ${col?`<span class="mute">datos: dif. ${col.diff.toFixed(1)} <button class="lnk" onclick="setDiff('${c.id}',${Math.round(col.diff)})">usar</button></span>`:''}
         <span class="mute">dificultad</span>
-        <select onchange="setDiff('${c.id}',this.value)">${[1,2,3,4,5].map(n=>`<option ${n===c.difficulty?'selected':''}>${n}</option>`).join('')}</select>
+        <select data-focus-id="diff-${c.id}" aria-label="Dificultad de ${esc(c.name)}" onchange="setDiff('${c.id}',this.value)">${[1,2,3,4,5].map(n=>`<option ${n===c.difficulty?'selected':''}>${n}</option>`).join('')}</select>
         <button class="btn del" onclick="delCourse('${c.id}')">Eliminar</button></div>`}).join('')||'<div class="empty">Sin ramos todavía.</div>'}
       <div class="row" style="margin-top:10px"><input id="cn" placeholder="Nombre del ramo">
         <select id="cd" title="Dificultad">${[1,2,3,4,5].map(n=>`<option ${n===3?'selected':''}>${n}</option>`).join('')}</select>
-        <button class="btn" onclick="addCourse()">Agregar</button></div>
+        <button class="btn" data-focus-id="add-course" onclick="addCourse()">Agregar</button></div>
       <p class="mute">Más dificultad = más minutos de preparación, más días de margen y micro-tareas más cortas.</p>
     </div>
     <div class="card"><h2>Horario de clases</h2>
       <div class="row"><select id="kc">${S.courses.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select>
         <select id="kd">${DAYS.map((d,i)=>`<option value="${i}">${d}</option>`).join('')}</select>
         <input id="ka" type="time" value="08:10"><input id="kb" type="time" value="09:40">
-        <button class="btn" onclick="addClass()">Agregar</button></div>
-      <div style="margin-top:8px">${S.classes.map(k=>`<div class="task"><span class="dot" style="background:${ccolor(k.courseId)}"></span>
+        <button class="btn" data-focus-id="add-class" onclick="addClass()">Agregar</button></div>
+      <div style="margin-top:8px">${S.classes.map(k=>`<div class="task"><span aria-hidden="true" class="dot" style="background:${ccolor(k.courseId)}"></span>
         <span style="flex:1">${esc(cname(k.courseId))} · ${DAYS[k.day]} ${k.start}–${k.end}</span><button class="btn del" onclick="delClass('${k.id}')">Quitar</button></div>`).join('')}</div>
       <p class="mute">Tus horas de clase definen cuánto puedes estudiar cada día.</p>
     </div>
@@ -236,9 +255,9 @@ function viewSyllabus(){
     <div class="row" style="margin-bottom:8px"><select id="ec">${S.courses.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select>
       <input id="et" placeholder="Título"><input id="ed" type="date">
       <select id="ey">${Object.entries(TYPE_LABEL).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>
-      <button class="btn" onclick="addEvent()">Agregar manualmente</button>
+      <button class="btn" data-focus-id="add-event" onclick="addEvent()">Agregar manualmente</button>
       <button class="btn sec" onclick="exportICS()" ${S.events.length?'':'disabled'}>Exportar a calendario (.ics)</button></div>
-    ${sorted.map(e=>`<div class="task"><span class="dot" style="background:${ccolor(e.courseId)}"></span>
+    ${sorted.map(e=>`<div class="task"><span aria-hidden="true" class="dot" style="background:${ccolor(e.courseId)}"></span>
       <span style="flex:1">${dshort(e.date)} · <b>${TYPE_LABEL[e.type]}</b> · ${esc(cname(e.courseId))} — ${esc(e.title)}${e.early?' <span class="tag">margen extra</span>':''}</span>
       <button class="btn del" onclick="delEvent('${e.id}')">Quitar</button></div>`).join('')||'<div class="empty">Sin fechas registradas.</div>'}
   </div>`;
@@ -327,7 +346,7 @@ function viewApoyo(){
       <div class="row" style="flex-direction:column;align-items:stretch">
         <input id="sn" placeholder="Nombre del servicio (ej. Bienestar estudiantil)" value="${esc(sp.name)}">
         <input id="sc" placeholder="Teléfono, correo o enlace" value="${esc(sp.contact)}">
-        <button class="btn" onclick="saveSupport()">Guardar</button></div>
+        <button class="btn" data-focus-id="save-support" onclick="saveSupport()">Guardar</button></div>
       ${sp.name||sp.contact?'':`<div class="banner info" style="margin:10px 0 0">¿Estudias en la Universidad de Concepción? La DISE (Dirección de Servicios Estudiantiles) publica su contacto de Bienestar Estudiantil en bienestar@udec.cl y dise.udec.cl; pregunta ahí por apoyo en salud mental. <button class="lnk" onclick="fillUdeC()">Guardar estos datos</button></div>`}
       ${sp.name||sp.contact?`<div class="banner lock" style="margin:10px 0 0"><b>${esc(sp.name||'Mi servicio de apoyo')}</b><br>${esc(sp.contact)}</div>`:''}
     </div>
@@ -387,7 +406,7 @@ function viewSalud(){
       <span class="h0"></span>sin estudio<span class="h1"></span>&lt;50%<span class="h2"></span>50–90%<span class="h3"></span>90–130%<span class="h4"></span>&gt;130%</div>
     <div style="margin-top:12px;overflow-x:auto">
     ${rows.map(r=>`<div style="margin-bottom:12px">
-      <div class="row" style="justify-content:space-between"><span><span class="dot" style="background:${r.c.color};display:inline-block"></span> <b>${esc(r.c.name)}</b>
+      <div class="row" style="justify-content:space-between"><span><span aria-hidden="true" class="dot" style="background:${r.c.color};display:inline-block"></span> <b>${esc(r.c.name)}</b>
         <span class="mute"> · cuota hoy ~${Math.round(r.target)} min</span></span>
         <span style="color:${r.col};font-weight:600">${r.status}</span></div>
       <div class="heat" style="grid-template-columns:repeat(${N},1fr);margin-top:4px;min-width:420px">
@@ -437,7 +456,7 @@ function viewTema(){
   </div>
   <div class="card"><h3>Vista previa</h3>
     <div class="preview">
-      <div class="preview-head"><span class="dot" style="background:var(--accent)"></span><b>Entrenador Académico</b></div>
+      <div class="preview-head"><span aria-hidden="true" class="dot" style="background:var(--accent)"></span><b>Entrenador Académico</b></div>
       <div class="preview-body">
         <div class="row"><span class="tag">Etiqueta</span><span class="tag sel on" style="cursor:default">Seleccionado</span></div>
         <div class="row" style="margin-top:12px"><button class="btn" style="cursor:default">Botón principal</button><button class="btn sec" style="cursor:default">Secundario</button></div>
@@ -483,7 +502,7 @@ function viewAmigos(){
   const sessionRow=s=>{
     const c=socialSessionCourse(s),who=s.host===me?'Tú':socialName(s.host);
     const state=s.mine==='accepted'?'<span class="tag soc-ok">Aceptada</span>':(s.mine==='invited'?'<span class="tag soc-wait">Pendiente</span>':(s.mine==='declined'?'<span class="tag">Rechazada</span>':''));
-    return `<div class="task"><span class="dot" style="background:${c?c.color:'var(--accent)'}"></span>
+    return `<div class="task"><span aria-hidden="true" class="dot" style="background:${c?c.color:'var(--accent)'}"></span>
       <span style="flex:1"><b>${dshort(s.date)} · ${esc(s.start_time)}–${esc(s.end_time)}</b> · ${esc(s.title)}<br>
       <span class="mute">${esc(s.course_name)} · ${esc(who)}${s.place?' · '+esc(s.place):''}</span>${s.note?`<br><span class="mute">${esc(s.note)}</span>`:''}</span>
       ${state}
@@ -522,7 +541,7 @@ function viewAmigos(){
       ${SOC.outgoing.map(x=>`<div class="task"><span style="flex:1">${esc(x.person.display_name)}</span><span class="tag soc-wait">Esperando respuesta</span></div>`).join('')||'<div class="empty">No hay solicitudes enviadas.</div>'}
     </div>
     <div class="card"><h3>Mis amigos</h3>
-      ${SOC.friends.map(p=>`<div class="task"><span class="dot" style="background:var(--accent)"></span>
+      ${SOC.friends.map(p=>`<div class="task"><span aria-hidden="true" class="dot" style="background:var(--accent)"></span>
         <span style="flex:1">${esc(p.display_name)}</span><button class="btn del" onclick="socialRemoveFriend('${esc(p.id)}')">Quitar</button></div>`).join('')||'<div class="empty">Aún no tienes amigos. Comparte tu código o pide el de alguien más.</div>'}
       <p class="mute" style="margin-bottom:0">No hay rachas, puntos ni comparaciones de tiempo: esto es solo para organizarse juntos.</p>
     </div>
@@ -545,7 +564,7 @@ function viewAmigos(){
   </div>
   <div class="card"><h3>Fechas compartidas</h3>
     <p class="mute" style="margin-top:0">Escoge tus ramos. Solo se envían el nombre del ramo, el título, el tipo y la fecha de cada evaluación, entrega o control.</p>
-    ${S.courses.map(c=>`<div class="share-row"><span class="dot" style="background:${c.color}"></span><b style="flex:1">${esc(c.name)}</b>
+    ${S.courses.map(c=>`<div class="share-row"><span aria-hidden="true" class="dot" style="background:${c.color}"></span><b style="flex:1">${esc(c.name)}</b>
       <label class="soc-switch"><input type="checkbox" ${c.share?'checked':''} onchange="setShare('${esc(c.id)}',this.checked)"> Compartir las fechas de este ramo con mis amigos</label></div>`).join('')||'<div class="empty">Agrega ramos para poder compartir fechas.</div>'}
     <h4>Fechas que comparten mis amigos</h4>
     ${Object.keys(groups).map(o=>`<div class="soc-friend-group"><h4>${esc(socialName(o))}</h4>

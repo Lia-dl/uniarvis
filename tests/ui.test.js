@@ -27,6 +27,11 @@ const fs=require('fs');
     if(sec!=='Inicio')await p.locator('.home-card').filter({hasText:sec}).click();
     if(sub)await p.click('nav >> text="'+sub+'"');
   };
+  const confirmOk=async(word)=>{
+    const d=p.locator('#confirm-dialog');await d.waitFor({state:'visible'});
+    if(word)await p.fill('#confirm-word',word);
+    await p.click('#confirm-ok');await d.waitFor({state:'hidden'});
+  };
   await p.goto('file://'+file);
 
   // 1. Primera pantalla: registro de perfil y consentimiento explícito
@@ -65,6 +70,20 @@ const fs=require('fs');
   ok('el perfil se puede editar',await p.evaluate(()=>S.profile.name==='Maite'&&S.profile.career==='Ingeniería'));
   await open('Ajustes','Privacidad');
   ok('Privacidad está en Ajustes',(await p.textContent('#app')).includes('Privacidad y mis datos'));
+  await p.locator('button[onclick="wipe()"]').focus();
+  await p.click('text=Borrar todo');
+  const dlg=p.locator('#confirm-dialog');await dlg.waitFor({state:'visible'});
+  const m=await p.evaluate(()=>({role:document.querySelector('[role="dialog"]').getAttribute('aria-modal'),
+    focus:document.activeElement.id,disabled:document.getElementById('confirm-ok').disabled}));
+  ok('modal accesible y exige BORRAR',m.role==='true'&&m.focus==='confirm-word'&&m.disabled,JSON.stringify(m));
+  await p.keyboard.press('Tab');
+  ok('el foco queda dentro del modal',await p.evaluate(()=>!!document.activeElement.closest('#confirm-dialog')));
+  await p.keyboard.press('Escape');await dlg.waitFor({state:'hidden'});
+  ok('Escape cierra y devuelve el foco',await p.evaluate(()=>document.activeElement.getAttribute('onclick')==='wipe()'));
+  await p.locator('.skip').focus();
+  ok('enlace Saltar al contenido visible al enfocarlo',await p.locator('.skip').isVisible());
+  const landmarks=await p.evaluate(()=>({main:document.querySelector('main').getAttribute('aria-label'),nav:document.querySelector('nav').getAttribute('aria-label')}));
+  ok('puntos de referencia accesibles',landmarks.main==='Contenido principal'&&landmarks.nav==='Navegación de secciones',JSON.stringify(landmarks));
   await open('Bienestar','Apoyo');
   ok('Apoyo ya no contiene Privacidad',!(await p.textContent('#app')).includes('Privacidad y mis datos'));
 
@@ -77,6 +96,30 @@ const fs=require('fs');
     cap:capFor(today()),min:minFor(today())}));
   ok('plan generado con micro-tareas',base.tasks>20,JSON.stringify(base));
   ok('micro-tareas entre 15 y 30 min',base.sizes.every(x=>x>=15&&x<=30),'tamaños '+base.sizes.join(','));
+  const hoyTxt=await p.textContent('#app');
+  ok('Hoy muestra agenda con horas',hoyTxt.includes('Agenda de hoy')&&/\d{1,2}:\d{2}/.test(hoyTxt));
+  ok('pestaña activa marcada para lectores de pantalla',(await p.textContent('nav button[aria-current="page"]'))==='Hoy');
+  ok('casillas del plan tienen etiqueta accesible',await p.locator('input[type="checkbox"][aria-label]').count()>0);
+  const nCourses=await p.evaluate(()=>S.courses.length);
+  await p.evaluate(()=>delCourse(S.courses[0].id));
+  ok('borrado simple ofrece Deshacer',await p.locator('.toast-undo').count()===1);
+  await p.click('.toast-undo');
+  ok('Deshacer recupera el ramo',await p.evaluate(n=>S.courses.length===n,nCourses));
+
+  // 2b. Redibujar en la misma ruta no mueve foco ni scroll ni reinicia la animación
+  await p.evaluate(()=>{window.scrollTo({top:320,behavior:'instant'})});
+  await p.waitForTimeout(80);
+  const y0=await p.evaluate(()=>window.scrollY);
+  await p.evaluate(()=>{const e=document.querySelector('#smin');e.focus();e.value='61';e.dispatchEvent(new Event('change',{bubbles:true}))});
+  const keep=await p.evaluate(()=>({id:document.activeElement.id,y:window.scrollY,anim:getComputedStyle(document.querySelector('#app')).animationName}));
+  ok('render conserva foco y scroll en la misma ruta',keep.id==='smin'&&Math.abs(keep.y-y0)<=2&&keep.anim==='none',JSON.stringify(keep)+' antes '+y0);
+  await p.evaluate(()=>{S.settings.min=60;save()});
+  await p.evaluate(()=>go('semana'));
+  const animA=await p.evaluate(()=>getComputedStyle(document.querySelector('#app')).animationName);
+  await p.evaluate(()=>render());
+  const animB=await p.evaluate(()=>getComputedStyle(document.querySelector('#app')).animationName);
+  ok('la animación solo corre al cambiar de ruta',animA==='fadeSlide'&&animB==='none',animA+' / '+animB);
+  await p.evaluate(()=>go('hoy'));
 
   // 3. Ningún día supera su capacidad (salvo que se avise)
   const over=await p.evaluate(()=>{const m={};S.tasks.filter(t=>!t.done).forEach(t=>m[t.date]=(m[t.date]||0)+t.minutes);
@@ -115,6 +158,14 @@ const fs=require('fs');
   const mv=await p.evaluate(()=>{const d=addDays(today(),-2);S.tasks.filter(t=>!t.done).slice(0,3).forEach(t=>t.date=d);
     replanAll();return {stale:S.tasks.filter(t=>!t.done&&t.date<today()).length,moved:S.moved}});
   ok('tareas pendientes viejas se reacomodan solas',mv.stale===0&&mv.moved&&mv.moved.n===3,JSON.stringify(mv));
+  const nd=await p.evaluate(()=>{
+    const ayer=addDays(today(),-1);
+    S.lastPlan=ayer;
+    S.tasks.push({id:'vieja-prueba',eventId:S.events[0].id,courseId:S.events[0].courseId,title:'Pendiente de ayer',date:ayer,minutes:15,done:false});
+    const changed=checkNewDay(ayer);
+    return {changed,lastPlan:S.lastPlan,stale:S.tasks.filter(t=>!t.done&&t.date<today()).length};
+  });
+  ok('cambio de día reprograma automáticamente',nd.changed&&nd.lastPlan===await p.evaluate(()=>today())&&nd.stale===0,JSON.stringify(nd));
 
   // 7. Patrones del diario
   const pt=await p.evaluate(()=>{const r=patterns();return {need:r.need,n:r.items.length}});
@@ -153,7 +204,7 @@ const fs=require('fs');
   ok('plan real sin micro-tareas fuera de 15–30',sz.every(x=>x>=15&&x<=30),sz.join(','));
 
   // 11c. Revocar consentimiento borra (si aceptas) y deja de usar el check-in
-  await p.evaluate(()=>setConsent(false));
+  const consentPromise=p.evaluate(()=>setConsent(false));await confirmOk();await consentPromise;
   const rv=await p.evaluate(()=>({diary:S.wellbeing.diary.length,ci:ci(today()),consent:S.consent.health}));
   ok('revocar consentimiento borra los check-ins y no se usan',rv.diary===0&&rv.ci===null&&rv.consent===false,JSON.stringify(rv));
   await p.evaluate(()=>setConsent(true));
@@ -196,11 +247,18 @@ const fs=require('fs');
     const len=(await p.textContent('#app')).length;ok('sección '+(sub||sec)+' renderiza',len>180,len+' caracteres');
     await p.screenshot({path:shots+'/tab-'+k+'.png',fullPage:true});
   }
+  await open('Planificación','Semana');
+  ok('navegación de semanas tiene nombres accesibles',await p.locator('button[aria-label="Semana anterior"]').count()===1&&await p.locator('button[aria-label="Semana siguiente"]').count()===1);
   // 14. Móvil
   await p.setViewportSize({width:390,height:800});await open('Planificación','Hoy');
   const sw=await p.evaluate(()=>document.documentElement.scrollWidth);
   ok('sin scroll horizontal en móvil (390px)',sw<=392,'ancho '+sw);
   await p.screenshot({path:shots+'/mobile-hoy.png',fullPage:false});
+  await open('Planificación','Semana');
+  ok('Semana móvil usa agenda vertical',await p.locator('.agenda-movil').isVisible()&&!await p.locator('.calwrap').isVisible());
+  const sw2=await p.evaluate(()=>document.documentElement.scrollWidth);
+  ok('agenda móvil sin scroll horizontal',sw2<=392,'ancho '+sw2);
+  await p.screenshot({path:shots+'/mobile-semana.png',fullPage:false});
 
   ok('sin errores de JavaScript en consola',errs.length===0,errs.join(' || '));
   console.log(res.join('\n'));

@@ -67,6 +67,11 @@ const fs=require('fs');
         DB.friendships=DB.friendships.filter(f=>!(f.status==='accepted'&&((f.requester===ME&&f.addressee===body.other)||(f.addressee===ME&&f.requester===body.other))));
         return json(r,200,null);
       }
+      if(p==='/rest/v1/rpc/restore_friend'&&method==='POST'){
+        if(!DB.friendships.some(f=>f.status==='accepted'&&((f.requester===ME&&f.addressee===body.other)||(f.addressee===ME&&f.requester===body.other))))
+          DB.friendships.push({id:'fr-'+(++DB.seq),requester:ME,addressee:body.other,status:'accepted'});
+        return json(r,200,null);
+      }
       if(p==='/rest/v1/study_sessions'&&method==='GET')return json(r,200,visibleSessions());
       if(p==='/rest/v1/study_sessions'&&method==='POST'){
         const s=Object.assign({id:'s-'+(++DB.seq)},body);DB.sessions.push(s);return json(r,201,[s]);
@@ -182,6 +187,13 @@ const fs=require('fs');
   await waitFor(()=>DB.friendships.some(f=>f.id==='fr-in-1'&&f.status==='accepted'));
   await waitFor(()=>p.locator('.task').filter({hasText:'Beto'}).locator('text=Quitar').count());
   ok('aceptar solicitud entrante desde la interfaz',DB.friendships.find(f=>f.id==='fr-in-1').status==='accepted');
+  const beto=DB.friendships.find(f=>f.id==='fr-in-1').requester;
+  await p.locator('.task').filter({hasText:'Beto'}).locator('text=Quitar').click();
+  await waitFor(()=>!DB.friendships.some(f=>f.status==='accepted'&&(f.requester===beto||f.addressee===beto)));
+  ok('quitar amigo ofrece Deshacer',await waitFor(async()=>await p.locator('.toast-undo').count()===1));
+  await p.click('.toast-undo');
+  ok('Deshacer recupera la amistad',await waitFor(()=>DB.friendships.some(f=>f.status==='accepted'&&(f.requester===beto||f.addressee===beto))));
+  await waitFor(()=>p.evaluate(()=>SOC.friends.some(x=>x.display_name==='Beto')));
 
   await p.fill('#ss-title','Repasar certamen');await p.fill('#ss-course','Cálculo III');
   await p.fill('#ss-date',await p.evaluate(()=>today()));

@@ -17,6 +17,11 @@ const fs=require('fs');
     if(sec!=='Inicio')await p.locator('.home-card').filter({hasText:sec}).click();
     if(sub)await p.click('nav >> text="'+sub+'"');
   };
+  const confirmClick=async(sel)=>{
+    await p.click(sel);
+    const d=p.locator('#confirm-dialog');await d.waitFor({state:'visible'});
+    await p.click('#confirm-ok');await d.waitFor({state:'hidden'});
+  };
 
   const ctx=await b.newContext({serviceWorkers:'block'});
   await ctx.route('**/js/config.js',r=>r.fulfill({contentType:'text/javascript',
@@ -82,7 +87,7 @@ const fs=require('fs');
   ok('importar fecha demo la agrega a mis fechas reales',await p.evaluate(a=>S.events.some(e=>e.title==='Certamen de derivadas'&&e.src&&e.src.owner===a),ANA));
   ok('la fecha importada queda en el respaldo local',(await p.evaluate(()=>localStorage.getItem('entrenador-academico-v1')||'')).includes('Certamen de derivadas'));
 
-  await p.click('text=Salir del modo demo');
+  await confirmClick('text=Salir del modo demo');
   await waitFor(()=>p.evaluate(()=>!SOC.demo));
   ok('salir vuelve al aviso sin configurar',(await p.textContent('#app')).includes('todavía no está configurada'));
   ok('ningún flujo demo hizo peticiones de red',external.length===0,external.slice(0,3).join(' | '));

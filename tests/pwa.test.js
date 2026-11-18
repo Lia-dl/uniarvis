@@ -28,6 +28,10 @@ const fs=require('fs');
     if(sec!=='Inicio')await p.locator('.home-card').filter({hasText:sec}).click();
     if(sub)await p.click('nav >> text="'+sub+'"');
   };
+  const confirmOk=async()=>{
+    const d=p.locator('#confirm-dialog');await d.waitFor({state:'visible'});
+    await p.click('#confirm-ok');await d.waitFor({state:'hidden'});
+  };
   await p.goto(base);
   await onboard();
   await acceptConsent();
@@ -65,7 +69,7 @@ const fs=require('fs');
   await p.evaluate(()=>{S=fresh();save();render()});
   ok('estado vaciado antes de restaurar',await p.evaluate(()=>S.courses.length===0));
   await onboard();
-  await p.setInputFiles('input[onchange="importData(this)"]',bkPath);await p.waitForTimeout(400);
+  await p.setInputFiles('input[onchange="importData(this)"]',bkPath);await confirmOk();await p.waitForTimeout(400);
   const rs=await p.evaluate(()=>({c:S.courses.length,e:S.events.length,d:S.wellbeing.diary.length,t:S.tasks.length}));
   ok('restaurar respaldo recupera todo',rs.c===4&&rs.e===nEv&&rs.d>0&&rs.t>0,JSON.stringify(rs));
 
@@ -76,7 +80,7 @@ const fs=require('fs');
   ok('rechaza respaldo con color malicioso y conserva los datos',await p.evaluate(()=>S.courses.length===4&&S.courses[0].color.startsWith('#')&&S.courses[0].color.length===7));
   const evil2=JSON.parse(JSON.stringify(bj));evil2.courses[0].name='<img src=x onerror="window.__pwn=1">';evil2.adapt={n:'<img src=x onerror="window.__pwn=1">',date:'2099-01-01'};
   fs.writeFileSync(tmp+'/malo2.json',JSON.stringify(evil2));
-  await p.setInputFiles('input[onchange="importData(this)"]',tmp+'/malo2.json');await p.waitForTimeout(400);
+  await p.setInputFiles('input[onchange="importData(this)"]',tmp+'/malo2.json');await confirmOk();await p.waitForTimeout(400);
   await open('Planificación','Hoy');await open('Académico','Mis ramos y horario');await p.waitForTimeout(300);
   ok('nombres con HTML se muestran como texto (sin ejecutar nada)',await p.evaluate(()=>!window.__pwn&&!document.querySelector('#app img')&&S.adapt===null));
   fs.writeFileSync(tmp+'/malo3.json','{"hola":1}');

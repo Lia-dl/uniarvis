@@ -96,6 +96,12 @@ const SocialMock=(function(){
       DB.friendships=DB.friendships.filter(f=>!(f.status==='accepted'&&((f.requester===ME&&f.addressee===body.other)||(f.addressee===ME&&f.requester===body.other))));
       return Promise.resolve(null);
     }
+    if(p==='/rest/v1/rpc/restore_friend'&&method==='POST'){
+      const other=body&&body.other;
+      if(!DB.friendships.some(f=>f.status==='accepted'&&((f.requester===ME&&f.addressee===other)||(f.addressee===ME&&f.requester===other))))
+        DB.friendships.push({id:'fr-demo-'+(++seq),requester:ME,addressee:other,status:'accepted',created_at:stamp()});
+      return Promise.resolve(null);
+    }
     if(p==='/rest/v1/study_sessions'&&method==='GET')return Promise.resolve(visible());
     if(p==='/rest/v1/study_sessions'&&method==='POST'){
       const s=Object.assign({id:'s-demo-'+(++seq),created_at:stamp()},body||{});

@@ -245,8 +245,8 @@ function socialStartDemo(){
   toast('Modo demo activado. Usa cualquier correo y cualquier código de 6 dígitos.');
   render();
 }
-function socialStopDemo(){
-  if(!confirm('¿Salir del modo demo? Tus datos locales y tu respaldo no se tocan.'))return;
+async function socialStopDemo(){
+  if(!await askConfirm({title:'Salir del modo demo',text:'Tus datos locales y tu respaldo no se tocan.',okLabel:'Salir'}))return;
   if(typeof SocialMock!=='undefined')SocialMock.stop();
   SOC=socialBlank();
   toast('Saliste del modo demo.');
@@ -284,13 +284,13 @@ async function socialSubmitName(){
   catch(e){SOC.msg=socialMessage(e)}
   finally{SOC.busy=false;render()}
 }
-function socialLogout(){
+async function socialLogout(){
   const demo=socialDemoActive();
-  if(!confirm(demo?'¿Salir del modo demo? Tus datos locales y tu respaldo no se tocan.':'Cerrar sesión de Amigos? Tus datos locales y tu respaldo no se tocan.'))return;
+  if(!await askConfirm({title:demo?'Salir del modo demo':'Cerrar sesión',text:'Tus datos locales y tu respaldo no se tocan.',okLabel:demo?'Salir':'Cerrar sesión'}))return;
   socialReset();toast(demo?'Saliste del modo demo. La app sigue funcionando con tus datos locales.':'Sesión cerrada. La app sigue funcionando sin conexión a Amigos.');render();
 }
 async function socialDeleteAccount(){
-  if(!confirm('¿Eliminar tu cuenta y todos tus datos del servidor (perfil, amistades, fechas compartidas y sesiones)? Esta acción no se puede deshacer. Tus datos locales NO se borran.'))return;
+  if(!await askConfirm({title:'Eliminar cuenta de Amigos',text:'Se borrarán del servidor tu perfil, amistades, fechas compartidas y sesiones. Esta acción no se puede deshacer. Tus datos locales NO se borran.',okLabel:'Eliminar',danger:true}))return;
   SOC.busy=true;render();
   try{
     await socialFetch('/rest/v1/rpc/delete_my_account',{method:'POST',body:{}});
@@ -323,10 +323,14 @@ async function socialRespondFriend(id,accept){
   }catch(e){toast(socialMessage(e))}
 }
 async function socialRemoveFriend(id){
-  if(!confirm('¿Quitar a esta persona de tus amigos?'))return;
+  const name=socialName(id);
   try{
     await socialFetch('/rest/v1/rpc/remove_friend',{method:'POST',body:{other:id}});
-    toast('Amistad eliminada del servidor.');
+    toast(name+' ya no es tu amiga.',()=>{
+      socialFetch('/rest/v1/rpc/restore_friend',{method:'POST',body:{other:id}})
+        .then(()=>{toast('Amistad restaurada.');return socialLoad()})
+        .catch(e=>toast(socialMessage(e)));
+    });
     await socialLoad();
   }catch(e){toast(socialMessage(e))}
 }
@@ -366,7 +370,7 @@ async function socialRespondSession(id,status){
   }catch(e){toast(socialMessage(e))}
 }
 async function socialCancelSession(id){
-  if(!confirm('¿Cancelar esta sesión? Se borrará también para los invitados.'))return;
+  if(!await askConfirm({title:'Cancelar sesión',text:'Se borrará también para los invitados.',okLabel:'Cancelar sesión',danger:true}))return;
   try{
     await socialFetch('/rest/v1/study_sessions?id=eq.'+encodeURIComponent(id),{method:'DELETE',prefer:'return=minimal'});
     toast('Sesión cancelada.');
@@ -408,6 +412,12 @@ function socialWeekBlocks(date){
     const pending=s.mine==='invited',c=socialSessionCourse(s);
     return `<div class="blk ses ${pending?'pend':''}" style="top:${(a-H0*60)/60*HH}px;height:${(b-a)/60*HH}px;background:${c?c.color:'var(--accent)'}" title="${esc(s.title)}">${pending?'? ':''}${esc(s.title)}<br>${esc(s.start_time)}–${esc(s.end_time)}</div>`;
   }).join('');
+}
+function socialAgendaItems(date){
+  if(!socialConfigured()||!socialMyId()||!SOC.ready)return [];
+  const me=socialMyId();
+  return SOC.sessions.filter(s=>s.date===date&&(s.host===me||s.mine==='accepted'||s.mine==='invited'))
+    .map(s=>({time:String(s.start_time||''),order:0,html:`<b>${esc(s.title)}</b><br><span class="mute">${esc(s.course_name)} · ${s.host===me?'tú':socialName(s.host)}${s.place?' · '+esc(s.place):''}</span>`}));
 }
 function socialTodayHtml(){
   if(!socialConfigured()||!socialMyId()||!SOC.ready)return '';

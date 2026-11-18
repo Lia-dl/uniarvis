@@ -272,9 +272,21 @@ end $$;
 revoke all on function public.respond_friend_request(uuid, boolean) from public;
 grant execute on function public.respond_friend_request(uuid, boolean) to authenticated;
 
+create table if not exists public.friendship_tombstones (
+  actor uuid not null references auth.users(id) on delete cascade,
+  other uuid not null references auth.users(id) on delete cascade,
+  at timestamptz not null default now(),
+  primary key (actor, other)
+);
+alter table public.friendship_tombstones enable row level security;
+revoke all on table public.friendship_tombstones from public;
+
 create or replace function public.remove_friend(other uuid)
 returns void language plpgsql security definer set search_path = public as $$
 begin
+  insert into public.friendship_tombstones (actor, other, at)
+  values (auth.uid(), remove_friend.other, now())
+  on conflict (actor, other) do update set at = now();
   delete from public.friendships f
    where f.status = 'accepted'
      and ((f.requester = auth.uid() and f.addressee = remove_friend.other)
@@ -282,6 +294,24 @@ begin
 end $$;
 revoke all on function public.remove_friend(uuid) from public;
 grant execute on function public.remove_friend(uuid) to authenticated;
+
+create or replace function public.restore_friend(other uuid)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (select 1 from public.friendship_tombstones t
+                  where t.actor = auth.uid() and t.other = restore_friend.other
+                    and t.at >= now() - interval '10 seconds') then
+    raise exception 'El tiempo para deshacer ya pasó.' using errcode = '22023';
+  end if;
+  if not public.are_friends(auth.uid(), restore_friend.other) then
+    insert into public.friendships (requester, addressee, status)
+    values (auth.uid(), restore_friend.other, 'accepted')
+    on conflict (requester, addressee) do nothing;
+  end if;
+  delete from public.friendship_tombstones where actor = auth.uid() and other = restore_friend.other;
+end $$;
+revoke all on function public.restore_friend(uuid) from public;
+grant execute on function public.restore_friend(uuid) to authenticated;
 
 -- Solo el invitado puede responder su propia invitación; no hay UPDATE directo.
 create or replace function public.respond_session(sid uuid, status text)

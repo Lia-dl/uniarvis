@@ -32,7 +32,7 @@ async function enableEncryption(){
   const a=$('#np1').value,b=$('#np2').value;
   if(a.length<8)return toast('Usa al menos 8 caracteres.');
   if(a!==b)return toast('Las contraseñas no coinciden.');
-  if(!confirm('Si olvidas la contraseña, tus datos NO se pueden recuperar. ¿Activar el cifrado?'))return;
+  if(!await askConfirm({title:'Activar cifrado',text:'Si olvidas la contraseña, tus datos NO se pueden recuperar. Guarda antes un respaldo.',okLabel:'Activar'}))return;
   try{
     const salt=crypto.getRandomValues(new Uint8Array(16));
     KDF={salt,it:PBKDF2_IT};KEYOBJ=await deriveKey(a,salt,PBKDF2_IT);
@@ -51,7 +51,7 @@ async function changePass(){
   }catch(e){toast('No se pudo cambiar la contraseña.')}
 }
 async function disableEncryption(){
-  if(!confirm('Tus datos volverán a guardarse sin cifrar en este navegador. ¿Continuar?'))return;
+  if(!await askConfirm({title:'Desactivar cifrado',text:'Tus datos volverán a guardarse sin cifrar en este navegador.',okLabel:'Desactivar',danger:true}))return;
   await dropKey();save();toast('Cifrado desactivado.');render();
 }
 async function unlock(ev){
@@ -63,8 +63,8 @@ async function unlock(ev){
     S=migrate(j);LOCKED=null;inval();start();
   }catch(e){toast('No pude abrirlo: contraseña incorrecta o archivo dañado.');const i=$('#lp');if(i){i.value='';i.focus()}}
 }
-function forgotPass(){
-  if(!confirm('Se borrarán los datos cifrados de este navegador. Solo podrás recuperarlos con un respaldo y su contraseña. ¿Continuar?'))return;
+async function forgotPass(){
+  if(!await askConfirm({title:'Borrar datos cifrados',text:'Se borrarán los datos cifrados de este navegador. Solo podrás recuperarlos con un respaldo y su contraseña.',okLabel:'Borrar',danger:true}))return;
   try{localStorage.removeItem(KEY)}catch(e){}
   LOCKED=null;KEYOBJ=null;KDF=null;S=fresh();start();
 }
