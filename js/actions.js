@@ -25,6 +25,7 @@ function toggleTask(id){
     if(doneToday()>=capFor(today()))return toast('Hoy ya completaste tu capacidad. Descansar también es parte del plan.');
     t.done=true;t.date=today();
     S.sessions.push({id:uid(),date:today(),courseId:t.courseId,minutes:t.minutes,taskId:t.id});
+    if(typeof arvisCelebrar==='function')arvisCelebrar();
   }else{t.done=false;S.sessions=S.sessions.filter(x=>x.taskId!==t.id)}
   save();
   if(doneToday()>=capFor(today()))replanAll();
@@ -40,7 +41,8 @@ function logFree(){
   const c=$('#fc').value,m=parseInt($('#fm').value,10);
   if(!c||!(m>0))return toast('Elige un ramo y los minutos.');
   if(doneToday()>=capFor(today()))return toast('Hoy ya completaste tu capacidad. Descansar también es parte del plan.');
-  S.sessions.push({id:uid(),date:today(),courseId:c,minutes:m});save();
+  S.sessions.push({id:uid(),date:today(),courseId:c,minutes:m});
+  if(typeof arvisCelebrar==='function')arvisCelebrar();save();
   if(doneToday()>=capFor(today()))replanAll();
   render();
 }
@@ -211,6 +213,10 @@ function validState(j){
   if(j.intro!==undefined){
     if(!j.intro||typeof j.intro!=='object'||Array.isArray(j.intro)||['pending','done','skipped'].indexOf(j.intro.status)<0)return 'introducción';
   }
+  if(j.settings!==undefined){
+    if(!j.settings||typeof j.settings!=='object'||Array.isArray(j.settings))return 'ajustes';
+    if(j.settings.arvis!==undefined&&typeof j.settings.arvis!=='boolean')return 'ajustes';
+  }
   const dia=j.wellbeing&&j.wellbeing.diary;
   if(dia!==undefined){
     if(!Array.isArray(dia))return 'diario';
@@ -227,7 +233,7 @@ function cleanState(j){
   c.courses=(j.courses||[]).map(x=>({id:x.id,name:x.name,difficulty:x.difficulty,color:x.color,share:x.share===true,
     passGrade:Number.isFinite(x.passGrade)?x.passGrade:4,roundFinal:x.roundFinal!==false,
     grades:(x.grades||[]).map(g=>({id:g.id,name:String(g.name||'').slice(0,80),score:+g.score,weight:+g.weight}))}));
-  c.settings={min:int15(j.settings&&j.settings.min)?j.settings.min:60,theme:themeOk(j.settings&&j.settings.theme)?j.settings.theme:'cian',mode:modeOk(j.settings&&j.settings.mode)?j.settings.mode:'light'};
+  c.settings={min:int15(j.settings&&j.settings.min)?j.settings.min:60,theme:themeOk(j.settings&&j.settings.theme)?j.settings.theme:'cian',mode:modeOk(j.settings&&j.settings.mode)?j.settings.mode:'light',arvis:!(j.settings&&j.settings.arvis===false)};
   c.tools=cleanTools(j.tools);
   c.wellbeing={diary:((j.wellbeing&&j.wellbeing.diary)||[]).map(e=>({date:e.date,mood:e.mood??null,energy:e.energy??null,sleep:e.sleep??null,tags:e.tags||[],note:e.note||'',ts:Number(e.ts)||0}))};
   c.support={name:String((j.support&&j.support.name)||'').slice(0,120),contact:String((j.support&&j.support.contact)||'').slice(0,300)};
@@ -353,4 +359,7 @@ async function loadDemo(){
 function setStyle(id){
   if(!styleOk(id))return;
   S.settings.style=id;save();render();
+}
+function setArvis(on){
+  S.settings.arvis=!!on;save();render();
 }

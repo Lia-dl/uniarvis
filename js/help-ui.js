@@ -12,12 +12,11 @@ function openHelp(key){
   const h=typeof AYUDA!=='undefined'&&AYUDA[key]; if(!h)return;
   const root=document.getElementById('help-root'); if(!root)return;
   const steps=(h.steps||[]).map(s=>`<li>${esc(s)}</li>`).join('');
+  const body=`<p>${esc(h.desc||'')}</p>${steps?`<ol class="help-steps">${steps}</ol>`:''}`;
+  const avatar=typeof arvisAvatarHtml==='function'?arvisAvatarHtml():'';
   root.innerHTML=`<div class="modal-backdrop" onclick="if(event.target===this)closeHelp()"><div class="modal-card help-modal" role="dialog" aria-modal="true" aria-label="${esc(h.title)}">
     <div class="modal-head"><h3>${esc(h.title)}</h3><button class="icon-btn" type="button" aria-label="Cerrar" onclick="closeHelp()">✕</button></div>
-    <div class="modal-body">
-      <p>${esc(h.desc||'')}</p>
-      ${steps?`<ol class="help-steps">${steps}</ol>`:''}
-    </div>
+    <div class="modal-body">${avatar?`<div class="help-with-arvis">${avatar}<div>${body}</div></div>`:body}</div>
   </div></div>`;
   const btn=root.querySelector('.icon-btn'); if(btn)try{btn.focus()}catch(e){}
 }

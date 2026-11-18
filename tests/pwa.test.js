@@ -40,8 +40,16 @@ const fs=require('fs');
   ok('manifest válido',mf.display==='standalone'&&mf.icons.length===3&&mf.lang==='es');
   const ic=await p.evaluate(async()=>{const o=[];for(const u of ['icons/icon-192.png','icons/icon-512.png','icons/icon.svg']){const r=await fetch(u);o.push(u+':'+r.status)}return o});
   ok('iconos disponibles',ic.every(x=>x.endsWith(':200')),ic.join(' '));
+  const av=await p.evaluate(async()=>{
+    const names=['energia','normal','celebrando','estudiando','preocupado','cansado','descansando'],o=[];
+    for(const n of names){const r=await fetch('icons/arvis/arvis-'+n+'.svg');o.push(n+':'+r.status)}
+    return o;
+  });
+  ok('SVG de Arvis disponibles',av.every(x=>x.endsWith(':200')),av.join(' '));
   await ctx.setOffline(true);await p.reload();
   ok('funciona sin conexión',(await p.textContent('#app')).includes('Elige por dónde empezar hoy'));
+  await p.waitForFunction(()=>{const i=document.querySelector('.arvis-card img');return i&&i.complete&&i.naturalWidth>0},null,{timeout:5000}).catch(()=>{});
+  ok('Arvis se ve sin conexión',await p.evaluate(()=>{const i=document.querySelector('.arvis-card img');return !!i&&i.complete&&i.naturalWidth>0}));
   await ctx.setOffline(false);
 
   // --- datos de ejemplo + ICS ---

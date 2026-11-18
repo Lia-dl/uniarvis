@@ -100,7 +100,9 @@ function viewInicio(){
   return `${screenHelp('inicio')}
   ${introHtml()}
   <div class="home-head"><div><h2>Hola, ${name}</h2><p class="mute" style="margin-bottom:0">Elige por dónde empezar hoy.</p></div></div>
+  ${arvisInicioHtml()}
   ${homeNotice()}
+  ${arvisAlertaHtml()}
   <div class="home-menu">${cards}</div>`;
 }
 function viewPerfil(){
@@ -198,6 +200,8 @@ function viewHoy(){
   });
   const opts=S.courses.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
   return `${screenHelp('hoy')}
+  ${arvisMomentoHtml()}${arvisEstudiandoHtml()}${arvisAlertaHtml()}
+  ${!S.courses.length?arvisVacioHtml('ramos'):''}
   ${!S.courses.length?'<div class="card empty">Aún no tienes ramos. Agrégalos en "Mis ramos y horario" o <button class="btn" onclick="go(\'ejemplos\')">carga datos de ejemplo</button></div>':''}
   ${warnHtml()}${criticalHtml()}
   ${S.soft&&softOn(t0)?`<div class="banner soft">Modo suave activo hasta el ${dshort(S.soft.until)}: tu carga está al 75%. <button class="lnk" onclick="endSoft()">Desactivar</button></div>`:''}
@@ -216,7 +220,7 @@ function viewHoy(){
   </div>
   <div class="grid2">
     <div class="card"><h3>Plan de hoy</h3>
-      ${rows||'<div class="empty">No hay micro-tareas para hoy. Agrega ramos y fechas en <b>Académico &gt; Syllabus y fechas</b> para generar tu plan, o registra estudio libre.</div>'}
+      ${rows||`${arvisVacioHtml('tareas')}<div class="empty">No hay micro-tareas para hoy. Agrega ramos y fechas en <b>Académico &gt; Syllabus y fechas</b> para generar tu plan, o registra estudio libre.</div>`}
       ${locked?'<p class="mute">No se adelanta ni se asigna más materia hoy.</p>':
         (low?'<p class="mute">Hoy no hace falta adelantar nada.</p>':(!pend.length&&nxt?`<button class="btn sec" onclick="pullNext()">Adelantar la siguiente micro-tarea (${nxt.minutes} min)</button>`:''))}
     </div>
@@ -310,7 +314,7 @@ function viewRamos(){
       ${S.courses.map(c=>`<div class="task"><span aria-hidden="true" class="dot" style="background:${c.color}"></span><b style="flex:1">${esc(c.name)}</b>
         <span class="mute">dificultad</span>
         <select data-focus-id="diff-${c.id}" aria-label="Dificultad de ${esc(c.name)}" onchange="setDiff('${c.id}',this.value)">${[1,2,3,4,5].map(n=>`<option ${n===c.difficulty?'selected':''}>${n}</option>`).join('')}</select>
-        <button class="btn del" onclick="delCourse('${c.id}')">Eliminar</button></div>`).join('')||'<div class="empty">Aún no tienes ramos. Escribe el nombre y toca <b>Agregar</b> para crear tu primer ramo.</div>'}
+        <button class="btn del" onclick="delCourse('${c.id}')">Eliminar</button></div>`).join('')||`${arvisVacioHtml('ramos')}<div class="empty">Aún no tienes ramos. Escribe el nombre y toca <b>Agregar</b> para crear tu primer ramo.</div>`}
       <div class="row" style="margin-top:10px"><input id="cn" placeholder="Nombre del ramo">
         <select id="cd" title="Dificultad">${[1,2,3,4,5].map(n=>`<option ${n===3?'selected':''}>${n}</option>`).join('')}</select>
         <button class="btn" data-focus-id="add-course" onclick="addCourse()">Agregar</button></div>
@@ -532,6 +536,10 @@ function viewTema(){
     <div class="modes">${MODES.map(([k,label])=>`<button type="button" class="mode-btn ${k===md?'on':''}" aria-pressed="${k===md}" onclick="setMode('${k}')"><span class="mode-preview ${k}"></span><span>${label}</span></button>`).join('')}</div>
     <p class="mute" style="margin-bottom:0">El modo claro suaviza los fondos y mantiene el contraste para leer; el oscuro cuida la vista con poca luz.</p>
   </div>
+  <div class="card"><h3>Arvis</h3>
+    <label class="mute"><input type="checkbox" ${S.settings.arvis!==false?'checked':''} onchange="setArvis(this.checked)"> Mostrar a Arvis</label>
+    <p class="mute" style="margin:6px 0 0">Aparece en el inicio y en algunos momentos clave. Si lo apagas, la app sigue igual que antes.</p>
+  </div>
   <div class="card"><h3>Vista previa</h3>
     <div class="preview">
       <div class="preview-head"><span aria-hidden="true" class="dot" style="background:var(--accent)"></span><b>U.A.R.V.I.S.</b></div>
@@ -596,6 +604,7 @@ function viewAmigos(){
   shared.forEach(e=>{(groups[e.owner]=groups[e.owner]||[]).push(e)});
   const imported=S.events.filter(e=>e.src).sort((a,b)=>a.date.localeCompare(b.date));
   return `${screenHelp('amigos')}
+  ${arvisMomentoHtml()}
   <div class="card hud-welcome">${socialDemoBanner()}
   ${SOC.msg?`<div class="banner info">${esc(SOC.msg)}</div>`:''}
   <div class="row" style="justify-content:space-between;align-items:flex-start">
@@ -623,7 +632,7 @@ function viewAmigos(){
     </div>
     <div class="card"><h3>Mis amigos</h3>
       ${SOC.friends.map(p=>`<div class="task"><span aria-hidden="true" class="dot" style="background:var(--accent)"></span>
-        <span style="flex:1">${esc(p.display_name)}</span><button class="btn del" onclick="socialRemoveFriend('${esc(p.id)}')">Quitar</button></div>`).join('')||'<div class="empty">Aún no tienes amigos. Comparte tu código o ingresa el de otra persona y toca <b>Enviar solicitud</b>.</div>'}
+        <span style="flex:1">${esc(p.display_name)}</span><button class="btn del" onclick="socialRemoveFriend('${esc(p.id)}')">Quitar</button></div>`).join('')||`${arvisVacioHtml('amigos')}<div class="empty">Aún no tienes amigos. Comparte tu código o ingresa el de otra persona y toca <b>Enviar solicitud</b>.</div>`}
       <p class="mute" style="margin-bottom:0">No hay rachas, puntos ni comparaciones de tiempo: esto es solo para organizarse juntos.</p>
     </div>
   </div>

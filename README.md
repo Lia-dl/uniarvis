@@ -20,6 +20,7 @@ Una agenda más un diario ya existen. Lo distinto aquí es que los dos lados se 
 
 **Ciclo central**
 - **Check-in de 20 segundos**: energía, ánimo y sueño en una escala simple.
+- **Arvis**, una mascota que aparece en el inicio y en momentos clave con mensajes cortos; su cara sigue la energía de tu check-in. Puedes ocultarlo desde **Ajustes → Apariencia**.
 - **Plan del día adaptativo**: con energía baja muestra solo el mínimo viable y mueve el resto a otros días, sin que reorganices nada.
 - **Capacidad realista por día**: no es un número fijo; se calcula con tus horas de clase, tu historial y tu check-in (ver abajo).
 
@@ -88,7 +89,7 @@ Los datos de ánimo, sueño y energía son **datos sensibles**, y se tratan así
 - Por defecto todo se guarda **solo en tu navegador** (almacenamiento local). La app no hace peticiones externas: el lector de PDF viene incluido y los .ics de horario se parsean en el navegador, sin subir el archivo.
 - **Amigos es opcional** y usa tu propio proyecto de Supabase. Si inicias sesión, al servidor van **solo**: tu nombre visible, tu código de amigo, tus relaciones de amistad, las fechas de los ramos que marques explícitamente como compartidos y tus sesiones de estudio.
 - Sin Supabase configurado puedes probar **Amigos → Probar con datos de ejemplo**: todo vive en memoria, no se hace ninguna petición de red y nada de ese ejemplo entra en tu respaldo o en el cifrado. Solo una fecha importada desde un amigo se agrega a tus fechas reales.
-- El check-in, la energía, el ánimo, el sueño, el diario, las notas personales, las calificaciones, los mazos de flashcards y la configuración del Pomodoro **nunca se envían al servidor**, incluso si usas Amigos. No existe tabla para ellos allí.
+- El check-in, la energía, el ánimo, el sueño, el diario, las notas personales, las calificaciones, los mazos de flashcards, la configuración del Pomodoro y lo que lee Arvis **nunca se envían al servidor**, incluso si usas Amigos. No existe tabla para ellos allí.
 - Puedes eliminar tu cuenta y los datos del servidor desde **Amigos → Eliminar mi cuenta y mis datos del servidor**. Eso no toca tus datos locales.
 - El check-in y el diario piden **consentimiento explícito** la primera vez que abres el check-in, en **Bienestar**. Si dices "Ahora no", la app funciona igual como organizador y puedes activarlo después en Bienestar o en **Ajustes → Privacidad**, donde también puedes revocarlo y borrar tus registros.
 - **Cifrado opcional con contraseña** (AES-256-GCM, clave derivada con PBKDF2 de 250 000 iteraciones). Si olvidas la contraseña no hay forma de recuperar los datos: descarga un respaldo antes.
@@ -113,6 +114,7 @@ js/state.js           estado y persistencia local
 js/capacity.js        capacidad realista del día
 js/planner.js         micro-tareas y semanas críticas
 js/wellbeing.js       check-in, alertas, pausas, respiración, patrones
+js/arvis.js           mascota Arvis: mensajes y estados según energía
 js/tools.js           Pomodoro y flashcards (Herramientas)
 js/syllabus.js        lectura de syllabus (PDF/texto)
 js/actions.js         acciones, respaldo, .ics, datos de ejemplo
@@ -122,7 +124,7 @@ js/config.js          URL y anon key de Supabase (vacías por defecto)
 js/social-mock.js     backend en memoria para el modo demo de Amigos
 js/social.js          Amigos: REST directo o capa demo, OTP, amistades, sesiones y fechas (opcional)
 supabase/schema.sql   tablas, RLS, helpers y RPCs (lo ejecutas tú en el SQL Editor)
-sw.js, manifest.webmanifest, icons/   app instalable y sin conexión
+sw.js, manifest.webmanifest, icons/, icons/arvis/   app instalable y sin conexión
 vendor/               pdf.js (Apache 2.0)
 tests/                pruebas automáticas en un navegador real
 docs/SUPABASE.md      guía para configurar Amigos
@@ -131,7 +133,7 @@ docs/screenshots/     capturas del README
 
 ## Pruebas
 
-Las pruebas abren la app en Chromium y recorren los flujos reales: navegación por secciones y URL (incluida Herramientas), modo Calma predeterminado para perfiles nuevos, migración de perfiles existentes a HUD, capacidad y plan, modo de energía baja, semanas críticas, reprogramación, alertas, consentimiento, calculadora de notas (caso normal, ya aprobado, meta alta, ponderaciones que no suman 100 %, redondeo 3,95 → 4,0, coma decimal y próxima evaluación), Pomodoro (retoma tras recargar y descanso largo después de 4 focos), flashcards (importación con tabulación y con ` ; `, avance de cajas y fechas Leitner), lectura de un PDF, respaldo y restauración (incluidos los campos nuevos y un archivo malicioso), importación y exportación de .ics (caso semanal, TZID/UTC, archivo malformado, límite de 2 MB y confirmación en la interfaz), introducción de 3 pasos (solo la primera vez, Saltar y repetirla desde Ajustes), funcionamiento sin conexión, cifrado, Amigos (con Supabase simulado mediante page.route(), incluida una comprobación de que nunca se envían datos de bienestar) y el modo demo sin red.
+Las pruebas abren la app en Chromium y recorren los flujos reales: navegación por secciones y URL (incluida Herramientas), modo Calma predeterminado para perfiles nuevos, migración de perfiles existentes a HUD, capacidad y plan, modo de energía baja, semanas críticas, reprogramación, alertas, consentimiento, calculadora de notas (caso normal, ya aprobado, meta alta, ponderaciones que no suman 100 %, redondeo 3,95 → 4,0, coma decimal y próxima evaluación), Pomodoro (retoma tras recargar y descanso largo después de 4 focos), flashcards (importación con tabulación y con ` ; `, avance de cajas y fechas Leitner), Arvis (energía 5 y 1, sin check-in con enlace a Bienestar, interruptor de Ajustes, celebración, foco, alerta, estados vacíos y avatar de ayuda), lectura de un PDF, respaldo y restauración (incluidos los campos nuevos y un archivo malicioso), importación y exportación de .ics (caso semanal, TZID/UTC, archivo malformado, límite de 2 MB y confirmación en la interfaz), introducción de 3 pasos (solo la primera vez, Saltar y repetirla desde Ajustes), funcionamiento sin conexión, cifrado, Amigos (con Supabase simulado mediante page.route(), incluida una comprobación de que nunca se envían datos de bienestar) y el modo demo sin red.
 
 `ash
 npm install

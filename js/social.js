@@ -384,6 +384,7 @@ function socialRegisterSession(id){
   const c=socialSessionCourse(s);
   if(!c)return toast('Agrega un ramo con ese nombre para registrar la sesión.');
   S.sessions.push({id:uid(),date:today(),courseId:c.id,minutes:Math.max(1,toMin(s.end_time)-toMin(s.start_time)),socialId:id});
+  if(typeof arvisCelebrar==='function')arvisCelebrar();
   save();replanAll();toast('Sesión registrada en tu día.');
   render();
 }

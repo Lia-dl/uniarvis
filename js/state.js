@@ -64,7 +64,7 @@ function cleanTools(t){
   return out;
 }
 const migrateTools=t=>cleanTools(t);
-const fresh=()=>({courses:[],classes:[],events:[],tasks:[],sessions:[],settings:{min:60,theme:'cian',mode:'light',style:'calma'},lastPlan:null,
+const fresh=()=>({courses:[],classes:[],events:[],tasks:[],sessions:[],settings:{min:60,theme:'cian',mode:'light',style:'calma',arvis:true},lastPlan:null,
   wellbeing:{diary:[]},createdAt:today(),lastBackup:null,backupSnooze:null,consent:null,soft:null,adapt:null,moved:null,dismissed:{},support:{name:'',contact:''},profile:{name:'',career:'',onboarded:false},intro:{status:'pending',at:null},tools:freshTools()});
 function migrate(s){
   const f=fresh();for(const k in f)if(s[k]===undefined)s[k]=f[k];
@@ -74,6 +74,7 @@ function migrate(s){
   if(!themeOk(s.settings.theme))s.settings.theme='cian';
   if(!modeOk(s.settings.mode))s.settings.mode='light';
   if(!styleOk(s.settings.style))s.settings.style='hud';
+  if(typeof s.settings.arvis!=='boolean')s.settings.arvis=true;
   delete s.settings.max;                          // la capacidad máxima ahora se calcula cada día
   delete s.reviews;                               // reseñas de texto libre de versiones anteriores: ya no se guardan
   delete s.ratings;                               // aportes anónimos de ramos de versiones anteriores: ya no se guardan

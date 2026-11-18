@@ -1,12 +1,14 @@
 /* Service worker: permite instalar la app y usarla sin internet.
    Estrategia: red primero (siempre la última versión) y, si no hay conexión, lo guardado. */
-const CACHE = 'entrenador-academico-v8';
+const CACHE = 'entrenador-academico-v7';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/styles.css',
-  'js/util.js', 'js/ics.js', 'js/crypto.js', 'js/state.js', 'js/capacity.js', 'js/planner.js', 'js/wellbeing.js',
+  'js/util.js', 'js/ics.js', 'js/crypto.js', 'js/state.js', 'js/capacity.js', 'js/planner.js', 'js/wellbeing.js', 'js/arvis.js',
   'js/syllabus.js', 'js/tools.js', 'js/config.js', 'js/social-mock.js', 'js/social.js', 'js/actions.js', 'js/ayuda.js', 'js/help-ui.js', 'js/views.js', 'js/app.js',
   'vendor/pdf.min.js', 'vendor/pdf.worker.min.js',
-  'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'
+  'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png',
+  'icons/arvis/arvis-energia.svg', 'icons/arvis/arvis-normal.svg', 'icons/arvis/arvis-celebrando.svg',
+  'icons/arvis/arvis-estudiando.svg', 'icons/arvis/arvis-preocupado.svg', 'icons/arvis/arvis-cansado.svg', 'icons/arvis/arvis-descansando.svg'
 ];
 
 self.addEventListener('install', e => {

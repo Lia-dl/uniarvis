@@ -53,6 +53,7 @@ function pomAdvance(now=Date.now(),natural=true,quiet=false){
   if(i>=60&&p.running)p.endsAt=now+pomDuration(p);
   if(changed){
     if(last&&natural)pomAlert(last,p.phase);
+    if(last==='focus'&&natural&&!quiet&&typeof arvisCelebrar==='function')arvisCelebrar();
     save();
     if(!quiet&&(typeof tab==='undefined'||tab==='herramientas')&&typeof render==='function')render();
   }
@@ -111,7 +112,7 @@ function pomodoroTick(){
 }
 function pomodoroHtml(){
   const p=pomCfg(),breath=p.phase!=='focus';
-  return `<div class="card" id="pomodoro"><h2>Pomodoro</h2>
+  return `${arvisMomentoHtml()}${arvisEstudiandoHtml()}<div class="card" id="pomodoro"><h2>Pomodoro</h2>
     <div class="stats"><div class="stat"><b id="pom-time">${pomClock(pomRemaining(p))}</b><span class="mute" id="pom-phase">${POM_PHASES[p.phase]} · ${pomCount(p)} de ${p.longEvery}</span></div></div>
     <div class="box" id="pom-progress" style="--f:0%" aria-hidden="true"></div>
     <div class="row" style="margin-top:10px">
