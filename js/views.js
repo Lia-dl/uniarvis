@@ -32,6 +32,60 @@ function homeNotice(){
   if(w)return `<div class="banner soft"><b>${w.title}</b> ${w.text} <button class="lnk" onclick="go('apoyo')">Ver apoyo</button></div>`;
   return '';
 }
+function icsPendingHtml(){
+  const sueltos=icsEvaluations&&icsEvaluations.length?`<details><summary>Posibles evaluaciones (no se guardan)</summary><ul>${icsEvaluations.map(e=>
+    `<li>${esc(e.date)} ${e.start?esc(e.start)+' ':''}${esc(e.title)}${e.location?' · '+esc(e.location):''}</li>`).join('')}</ul></details>`:'';
+  if(!icsPending)return (icsNotice?`<div class="banner info">${esc(icsNotice)}</div>`:'')+sueltos;
+  const courseOpts=sel=>S.courses.map(c=>`<option value="${c.id}" ${sel===c.id?'selected':''}>${esc(c.name)}</option>`).join('')+`<option value="new" ${sel==='new'||!sel?'selected':''}>Crear ramo nuevo</option>`;
+  return `<div class="card" id="ics-confirm"><h3>Horario detectado · revisa y confirma</h3>
+    <p class="mute" style="margin-top:0">No guardé nada todavía. Marca los bloques que quieras agregar, revisa el nombre y asígnalos a un ramo.</p>
+    <table><tr><th></th><th>Bloque</th><th>Nombre</th><th>Ramo</th></tr>
+    ${icsPending.map((b,i)=>`<tr><td><input type="checkbox" aria-label="Importar ${esc(b.name)}" data-focus-id="ics-keep-${i}" ${b.keep?'checked':''} onchange="setICSBlock(${i},'keep',this.checked)"></td>
+      <td>${DAYS[b.day]} ${b.start}–${b.end}<br><span class="mute">${b.count} semana(s)${b.location?' · '+esc(b.location):''}</span></td>
+      <td><input id="ics-name-${i}" style="width:100%" maxlength="80" value="${esc(b.name)}" onchange="setICSBlock(${i},'name',this.value)"></td>
+      <td><select data-focus-id="ics-course-${i}" onchange="setICSBlock(${i},'courseId',this.value)">${courseOpts(b.courseId)}</select></td></tr>`).join('')}</table>
+    ${icsNotice?`<p class="mute">⚠ ${esc(icsNotice)}</p>`:''}
+    ${sueltos}
+    <div class="row" style="margin-top:8px"><button class="btn" onclick="confirmICS()">Confirmar y agregar al horario</button>
+      <button class="btn sec" onclick="cancelICS()">Cancelar</button></div></div>`;
+}
+function introHtml(){
+  if(typeof introActive!=='function'||!introActive())return '';
+  const total=3,step=introStep,totalTxt=`${step}/${total}`;
+  let body='';
+  if(step===1){
+    body=`<p class="mute" style="margin-top:0">Empieza con lo mínimo: escribe tus ramos y, si quieres, sube un syllabus para tener las fechas a mano.</p>
+      <div class="hud-form" style="max-width:520px">
+        <label>Nombre del ramo<input id="ob-cn" type="text" maxlength="80" placeholder="Ej. Cálculo III"></label>
+        <label>Dificultad<select id="ob-cd" title="Dificultad">${[1,2,3,4,5].map(n=>`<option ${n===3?'selected':''}>${n}</option>`).join('')}</select></label>
+      </div>
+      <div class="row" style="margin-top:8px"><button class="btn" data-focus-id="intro-add-course" onclick="introAddCourse()">Agregar ramo</button>
+        <button class="btn sec" onclick="go('syllabus')">Subir syllabus</button></div>
+      <p class="mute"><button class="lnk" onclick="loadDemo()">Prefiero ver un ejemplo primero</button> · también puedes hacerlo después en Ajustes → Datos de ejemplo.</p>`;
+  }else if(step===2){
+    body=`<p class="mute" style="margin-top:0">Importa tu horario desde el calendario o agrégalo a mano. Solo se guarda lo que confirmes.</p>
+      <div class="row"><label class="btn sec" style="cursor:pointer">Importar desde calendario (.ics)<input type="file" accept=".ics,text/calendar" style="display:none" onchange="onICSFile(this)"></label></div>
+      ${S.courses.length?`<div class="row" style="margin-top:8px"><select id="ob-kc">${S.courses.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select>
+        <select id="ob-kd">${DAYS.map((d,i)=>`<option value="${i}">${d}</option>`).join('')}</select>
+        <input id="ob-ka" type="time" value="08:10"><input id="ob-kb" type="time" value="09:40">
+        <button class="btn" data-focus-id="intro-add-class" onclick="introAddClass()">Agregar</button></div>`
+      :'<p class="mute">Aún no hay ramos: si importas un .ics, crearemos los ramos por ti.</p>'}
+      ${icsPendingHtml()}`;
+  }else{
+    body=`<p class="mute" style="margin-top:0">El check-in diario toma 20 segundos y registra energía, ánimo y sueño.</p>
+      <p class="mute">Con eso ajusto tu capacidad del día y, si hace falta, dejo solo lo esencial. Es optativo, puedes revocarlo cuando quieras.</p>
+      ${consentCard(true)}`;
+  }
+  return `<div class="card" id="onboarding" aria-label="Introducción">
+    <div class="row" style="justify-content:space-between"><h2 style="margin:0">Configura tu semestre</h2><span class="tag" aria-label="Paso ${step} de ${total}">${totalTxt}</span></div>
+    <p class="mute">${['Ramos','Horario','Primer check-in'][step-1]}</p>
+    ${body}
+    <div class="row" style="justify-content:space-between;margin-top:10px">
+      <button class="btn sec" onclick="introPrev()" ${step===1?'disabled':''}>Atrás</button>
+      <div class="row"><button class="lnk" onclick="introFinish('skipped')">Saltar</button>
+      ${step<3?'<button class="btn" data-focus-id="intro-next" onclick="introNext()">Siguiente</button>':'<button class="btn" data-focus-id="intro-done" onclick="introFinish(\'done\')">Listo</button>'}</div>
+    </div></div>`;
+}
 function viewInicio(){
   const name=S.profile&&S.profile.name?esc(S.profile.name):'';
   const descs={planificacion:'Tu día y tu semana, sin sobrecargas.',academico:'Ramos, fechas, notas y carga.',bienestar:'Check-in, pausas y apoyo.',social:'Coordina sesiones con amigos.',ajustes:'Perfil, tema y privacidad.'};
@@ -44,6 +98,7 @@ function viewInicio(){
     <span class="home-copy"><b>${s.label}</b><span>${descs[s.key]||''}</span></span>
     <span class="home-arrow" aria-hidden="true">→</span></button>`}).join('');
   return `${screenHelp('inicio')}
+  ${introHtml()}
   <div class="home-head"><div><h2>Hola, ${name}</h2><p class="mute" style="margin-bottom:0">Elige por dónde empezar hoy.</p></div></div>
   ${homeNotice()}
   <div class="home-menu">${cards}</div>`;
@@ -58,7 +113,8 @@ function viewPerfil(){
       <button class="btn" data-focus-id="save-profile" onclick="saveProfile()">Guardar cambios</button>
     </div></div>`;
 }
-function consentCard(){
+function consentCard(onboarding){
+  const yes=onboarding?'introConsent(true)':'setConsent(true)',no=onboarding?'introConsent(false)':'setConsent(false)';
   return `<div class="card"><h3>Antes de empezar: tus datos de bienestar</h3>
     <p style="margin-top:0">El check-in y el diario guardan datos sensibles (energía, ánimo, sueño y notas). Así funcionan:</p>
     <ul style="margin:0 0 10px 18px;padding:0">
@@ -66,8 +122,8 @@ function consentCard(){
       <li>Los usa la propia app para ajustar tu plan y mostrarte patrones. No hay diagnósticos, puntajes ni rachas.</li>
       <li>Puedes exportarlos, revocar el permiso o borrarlos cuando quieras (en <i>Ajustes → Privacidad</i>).</li>
     </ul>
-    <div class="row"><button class="btn" onclick="setConsent(true)">Acepto y quiero usar el check-in</button>
-    <button class="btn sec" onclick="setConsent(false)">Ahora no</button></div>
+    <div class="row"><button class="btn" onclick="${yes}">Acepto y quiero usar el check-in</button>
+    <button class="btn sec" onclick="${no}">Ahora no</button></div>
     <p class="mute" style="margin-bottom:0">Sin check-in la app igual funciona: calcula tu capacidad con tus clases y tu ritmo.</p></div>`;
 }
 function scaleRow(label,key,arr){
@@ -239,6 +295,8 @@ function viewRamos(){
         <select id="kd">${DAYS.map((d,i)=>`<option value="${i}">${d}</option>`).join('')}</select>
         <input id="ka" type="time" value="08:10"><input id="kb" type="time" value="09:40">
         <button class="btn" data-focus-id="add-class" onclick="addClass()">Agregar</button></div>
+      <div class="row" style="margin-top:8px"><label class="btn sec" style="cursor:pointer">Importar desde calendario (.ics)<input type="file" accept=".ics,text/calendar" style="display:none" onchange="onICSFile(this)"></label></div>
+      ${icsPendingHtml()}
       <div style="margin-top:8px">${S.classes.map(k=>`<div class="task"><span aria-hidden="true" class="dot" style="background:${ccolor(k.courseId)}"></span>
         <span style="flex:1">${esc(cname(k.courseId))} · ${DAYS[k.day]} ${k.start}–${k.end}</span><button class="btn del" onclick="delClass('${k.id}')">Quitar</button></div>`).join('')}</div>
       <p class="mute">Tus horas de clase definen cuánto puedes estudiar cada día.</p>
@@ -381,7 +439,7 @@ function viewPrivacidad(){
       <li>Si activas la sección <i>Amigos</i> e inicias sesión, al servidor van <b>solo</b> tu nombre visible, tu código de amigo, tus relaciones de amistad, las fechas de los ramos que marques explícitamente como compartidos y tus sesiones de estudio.</li>
       <li>Los datos de bienestar (check-in, energía, ánimo, sueño, diario, notas personales y calificaciones) <b>nunca salen de este dispositivo</b>: no hay ninguna tabla para ellos en el servidor.</li>
       <li>${KEYOBJ?'Tus datos locales están cifrados con tu contraseña.':'Por defecto los datos locales no están cifrados: si compartes este equipo, activa el cifrado con contraseña (más abajo) o borra tus datos de bienestar.'}</li>
-      <li>El lector de PDF viene incluido: tu archivo <b>no se sube</b>, se lee dentro de tu navegador.</li>
+      <li>El lector de PDF viene incluido: tu archivo <b>no se sube</b>, se lee dentro de tu navegador. Los horarios .ics también se leen solo en tu navegador.</li>
       <li>Para borrar lo que sí se guarda en el servidor, ve a <i>Amigos → Eliminar mi cuenta y mis datos del servidor</i>. Eso no borra tus datos locales.</li>
     </ul>
     <p class="mute">Estado: ${!S.consent?'aún no decidiste si activar el check-in':(S.consent.health?'check-in activado':'check-in desactivado')}. Último respaldo: ${S.lastBackup?dshort(S.lastBackup):'nunca'}.</p>
@@ -458,7 +516,9 @@ function viewTema(){
       </div>
     </div>
   </div>
-  <div class="card"><h3>Tutorial</h3><p class="mute" style="margin-top:0">Puedes volver a ver la guía de bienvenida con los pasos de cada sección.</p><button class="btn sec" onclick="startTour(true)">Ver tutorial de nuevo</button></div>`;
+  <div class="card"><h3>Tutorial</h3><p class="mute" style="margin-top:0">Puedes volver a ver la guía de bienvenida con los pasos de cada sección.</p>
+    <div class="row"><button class="btn sec" onclick="startTour(true)">Ver tutorial de nuevo</button>
+      <button class="btn sec" data-focus-id="restart-intro" onclick="restartIntro()">Ver la introducción de nuevo</button></div></div>`;
 }
 function viewAmigos(){
   if(!socialConfigured())return `${screenHelp('amigos')}<div class="card"><h2>Amigos</h2>

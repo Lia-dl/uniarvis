@@ -99,6 +99,7 @@ const fs=require('fs');
   ok('Escape cierra y devuelve el foco',await p.evaluate(()=>document.activeElement.getAttribute('onclick')==='wipe()'));
   await p.locator('.skip').focus();
   ok('enlace Saltar al contenido visible al enfocarlo',await p.locator('.skip').isVisible());
+  await p.evaluate(()=>document.activeElement.blur());
   const landmarks=await p.evaluate(()=>({main:document.querySelector('main').getAttribute('aria-label'),nav:document.querySelector('nav').getAttribute('aria-label')}));
   ok('puntos de referencia accesibles',landmarks.main==='Contenido principal'&&landmarks.nav==='Navegación de secciones',JSON.stringify(landmarks));
   await open('Bienestar','Apoyo');

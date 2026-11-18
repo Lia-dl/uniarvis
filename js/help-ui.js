@@ -1,4 +1,4 @@
-﻿/* Componentes reutilizables: botón/panel de ayuda y tour de bienvenida */
+/* Componentes reutilizables: botón/panel de ayuda y tour de bienvenida */
 let tourIndex=0;
 
 function screenHelp(key){
@@ -65,6 +65,7 @@ function finishTour(){
 
 function maybeShowTour(){
   if(typeof S==='undefined'||!S.profile||!S.profile.onboarded)return;
+  if(typeof introActive==='function'&&introActive())return;
   if(typeof LOCKED!=='undefined'&&LOCKED)return;
   const root=document.getElementById('tour-root');
   if(root&&root.innerHTML.trim())return;

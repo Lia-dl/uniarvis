@@ -25,6 +25,7 @@ Una agenda más un diario ya existen. Lo distinto aquí es que los dos lados se 
 
 **Organización**
 - **Syllabus**: subes un PDF (o pegas el texto), la app extrae fechas y evaluaciones y **te pide confirmar** antes de agregarlas, porque la extracción automática se equivoca.
+- **Horario desde calendario (.ics)**: en *Mis ramos y horario* (o en el onboarding) subes un .ics de hasta 2 MB. Lee VEVENT semanales (RRULE, BYDAY, UNTIL/COUNT), líneas plegadas y zonas horarias (TZID y UTC → hora local de Chile) sin librerías ni envío del archivo. Los bloques repetitivos se muestran para **confirmar**: puedes marcarlos, editar el nombre y asignarlos a un ramo existente o crear uno nuevo; los eventos sueltos se listan aparte como posibles evaluaciones y no se guardan.
 - **Micro-tareas** de 15 a 30 min, con más tiempo y más anticipación para los ramos que más te cuestan.
 - **Semanas críticas**: avisa hasta 4 semanas antes cuando se juntan 3 evaluaciones, entregas o controles en 5 días, y propone empezar antes.
 - **Reprogramación sin culpa**: lo que no alcanzas se redistribuye solo; no hay lista de "atrasadas" ni rojos.
@@ -62,6 +63,8 @@ Con energía baja (nivel 1 o 2, o factor menor a 0,65) el plan de hoy se limita 
 
 Al abrir la app aparece **Inicio**, con acceso a las secciones **Bienestar, Académico, Planificación, Social y Ajustes**. Cada sección tiene subpestañas (en móvil, una barra inferior fija y chips con desplazamiento lateral) y la ruta se guarda en la URL (#/academico/notas), así que recargar o usar Atrás vuelve al mismo lugar. El modo visual **Calma** es el predeterminado para perfiles nuevos; el estilo **HUD** sigue disponible en **Ajustes → Apariencia**. Si cambias de tema, modo o estilo, tu elección se conserva.
 
+Al crear el perfil por primera vez, si aún no hay ramos, aparece en Inicio una **introducción de 3 pasos** (ramos, horario y primer check-in). Cada paso tiene **Saltar**, se muestra el progreso (1/3, 2/3, 3/3) y el estado queda guardado para no volver a mostrarla. En **Ajustes → Apariencia → Ver la introducción de nuevo** puedes repetirla cuando quieras. En el paso 1 hay un enlace **Prefiero ver un ejemplo primero** que carga los datos de ejemplo.
+
 ## Publicarla en GitHub Pages
 
 1. Crea un repositorio y sube todos los archivos de esta carpeta (index.html debe quedar en la raíz).
@@ -72,7 +75,7 @@ Al abrir la app aparece **Inicio**, con acceso a las secciones **Bienestar, Acad
 
 Los datos de ánimo, sueño y energía son **datos sensibles**, y se tratan así:
 
-- Por defecto todo se guarda **solo en tu navegador** (almacenamiento local). La app no hace peticiones externas: el lector de PDF viene incluido.
+- Por defecto todo se guarda **solo en tu navegador** (almacenamiento local). La app no hace peticiones externas: el lector de PDF viene incluido y los .ics de horario se parsean en el navegador, sin subir el archivo.
 - **Amigos es opcional** y usa tu propio proyecto de Supabase. Si inicias sesión, al servidor van **solo**: tu nombre visible, tu código de amigo, tus relaciones de amistad, las fechas de los ramos que marques explícitamente como compartidos y tus sesiones de estudio.
 - Sin Supabase configurado puedes probar **Amigos → Probar con datos de ejemplo**: todo vive en memoria, no se hace ninguna petición de red y nada de ese ejemplo entra en tu respaldo o en el cifrado. Solo una fecha importada desde un amigo se agrega a tus fechas reales.
 - El check-in, la energía, el ánimo, el sueño, el diario, las notas personales y las calificaciones **nunca se envían al servidor**, incluso si usas Amigos. No existe tabla para ellos allí.
@@ -94,6 +97,7 @@ Esta app es una guía de organización y autocuidado. **No es un dispositivo mé
 index.html            página principal
 css/styles.css        estilos (Calma/HUD, claro/oscuro, acentos)
 js/util.js            fechas y utilidades
+js/ics.js             parser de horarios .ics (sin librerías)
 js/crypto.js          cifrado opcional con contraseña
 js/state.js           estado y persistencia local
 js/capacity.js        capacidad realista del día
@@ -116,7 +120,7 @@ docs/screenshots/     capturas del README
 
 ## Pruebas
 
-Las pruebas abren la app en Chromium y recorren los flujos reales: navegación por secciones y URL, modo Calma predeterminado para perfiles nuevos, migración de perfiles existentes a HUD, capacidad y plan, modo de energía baja, semanas críticas, reprogramación, alertas, consentimiento, lectura de un PDF, respaldo y restauración (incluido un archivo malicioso), .ics, funcionamiento sin conexión, cifrado, Amigos (con Supabase simulado mediante page.route(), incluida una comprobación de que nunca se envían datos de bienestar) y el modo demo sin red.
+Las pruebas abren la app en Chromium y recorren los flujos reales: navegación por secciones y URL, modo Calma predeterminado para perfiles nuevos, migración de perfiles existentes a HUD, capacidad y plan, modo de energía baja, semanas críticas, reprogramación, alertas, consentimiento, lectura de un PDF, respaldo y restauración (incluido un archivo malicioso), importación y exportación de .ics (caso semanal, TZID/UTC, archivo malformado, límite de 2 MB y confirmación en la interfaz), introducción de 3 pasos (solo la primera vez, Saltar y repetirla desde Ajustes), funcionamiento sin conexión, cifrado, Amigos (con Supabase simulado mediante page.route(), incluida una comprobación de que nunca se envían datos de bienestar) y el modo demo sin red.
 
 `ash
 npm install

@@ -1,8 +1,8 @@
-﻿/* U.A.R.V.I.S. · Estado de la app y persistencia local */
+/* U.A.R.V.I.S. · Estado de la app y persistencia local */
 /* ===================== Estado y persistencia (solo en este navegador) ===================== */
 const KEY='entrenador-academico-v1';
 const fresh=()=>({courses:[],classes:[],events:[],tasks:[],sessions:[],settings:{min:60,theme:'cian',mode:'light',style:'calma'},lastPlan:null,
-  wellbeing:{diary:[]},createdAt:today(),lastBackup:null,backupSnooze:null,consent:null,soft:null,adapt:null,moved:null,dismissed:{},support:{name:'',contact:''},profile:{name:'',career:'',onboarded:false}});
+  wellbeing:{diary:[]},createdAt:today(),lastBackup:null,backupSnooze:null,consent:null,soft:null,adapt:null,moved:null,dismissed:{},support:{name:'',contact:''},profile:{name:'',career:'',onboarded:false},intro:{status:'pending',at:null}});
 function migrate(s){
   const f=fresh();for(const k in f)if(s[k]===undefined)s[k]=f[k];
   if(!s.wellbeing||!Array.isArray(s.wellbeing.diary))s.wellbeing={diary:[]};
@@ -18,6 +18,8 @@ function migrate(s){
   if(!s.profile||typeof s.profile!=='object')s.profile={name:'',career:'',onboarded:false};
   if(s.profile.name==null)s.profile.name=''; if(s.profile.career==null)s.profile.career='';
   if(typeof s.profile.onboarded!=='boolean')s.profile.onboarded=!!(s.profile.name);
+  if(!s.intro||typeof s.intro!=='object'||Array.isArray(s.intro))s.intro={status:(Array.isArray(s.courses)&&s.courses.length)?'done':'pending',at:null};
+  if(['pending','done','skipped'].indexOf(s.intro.status)<0)s.intro.status='pending';
   if(Array.isArray(s.courses))s.courses.forEach(c=>{if(!Array.isArray(c.grades))c.grades=[];if(typeof c.share!=='boolean')c.share=false});
   return s;
 }
@@ -39,3 +41,16 @@ const cname=id=>course(id)?course(id).name:'(ramo eliminado)';
 const ccolor=id=>course(id)?course(id).color:'#6b7384';
 
 let section='inicio',tab='inicio',weekStart=mondayOf(today()),pending=[],sylText='',sylCourse='',draft=null,ciEdit=false,bsel='larga',bt=null,mt=null;
+let icsPending=null,icsNotice='',icsEvaluations=[],introStep=1,introForced=false;
+function introActive(){
+  if(!S.profile||!S.profile.onboarded||LOCKED)return false;
+  if(!S.intro||S.intro.status!=='pending')return false;
+  return introForced||!S.courses.length;
+}
+function introMark(status){
+  S.intro={status:status,at:today()};introStep=1;introForced=false;save();
+}
+function introFinish(status){
+  introMark(status);render();
+  if(typeof maybeShowTour==='function')maybeShowTour();
+}

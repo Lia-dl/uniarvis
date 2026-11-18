@@ -73,6 +73,29 @@ function saveProfile(){
   S.profile={name:name.slice(0,60),career:career.slice(0,80),onboarded:true};
   save();toast('Perfil actualizado.');render();
 }
+function introAddCourse(){
+  const n=(($('#ob-cn')||{}).value||'').trim();if(!n)return toast('Escribe el nombre del ramo.');
+  S.courses.push({id:uid(),name:n.slice(0,80),difficulty:parseInt(($('#ob-cd')||{}).value,10)||3,color:COLORS[S.courses.length%COLORS.length],grades:[]});
+  introMark('done');toast('Ramo agregado. Ya puedes seguir con tu horario en Mis ramos y horario.');render();
+}
+function introAddClass(){
+  const c=($('#ob-kc')||{}).value,d=+($('#ob-kd')||{}).value,a=($('#ob-ka')||{}).value,b=($('#ob-kb')||{}).value;
+  if(!c||!a||!b||toMin(b)<=toMin(a))return toast('Revisa ramo y horas.');
+  S.classes.push({id:uid(),courseId:c,day:d,start:a,end:b});
+  introMark('done');replanAll();toast('Clase agregada al horario.');render();
+}
+function introNext(){if(introStep<3){introStep++;render()}}
+function introPrev(){if(introStep>1){introStep--;render()}}
+async function introConsent(v){
+  introMark('done');
+  await setConsent(v);
+  toast(v?'Check-in activado. Puedes cambiarlo cuando quieras en Ajustes → Privacidad.':'Sin check-in la app igual funciona y calcula tu capacidad con tus clases.');
+}
+function restartIntro(){
+  introStep=1;introForced=true;
+  S.intro={status:'pending',at:null};save();go('inicio');
+  toast('Introducción reiniciada.');
+}
 function addCourse(){
   const n=$('#cn').value.trim();if(!n)return;
   S.courses.push({id:uid(),name:n,difficulty:parseInt($('#cd').value,10),color:COLORS[S.courses.length%COLORS.length],grades:[]});
@@ -177,6 +200,9 @@ function validState(j){
     if(j.profile.name!==undefined&&!str(j.profile.name,60))return 'perfil';
     if(j.profile.career!==undefined&&!str(j.profile.career,80))return 'perfil';
   }
+  if(j.intro!==undefined){
+    if(!j.intro||typeof j.intro!=='object'||Array.isArray(j.intro)||['pending','done','skipped'].indexOf(j.intro.status)<0)return 'introducción';
+  }
   const dia=j.wellbeing&&j.wellbeing.diary;
   if(dia!==undefined){
     if(!Array.isArray(dia))return 'diario';
@@ -196,6 +222,7 @@ function cleanState(j){
   c.consent=j.consent&&typeof j.consent.health==='boolean'?{health:j.consent.health,at:today()}:null;
   c.lastBackup=typeof j.lastBackup==='string'&&RX.date.test(j.lastBackup)?j.lastBackup:null;
   if(j.profile&&typeof j.profile==='object')c.profile={name:String(j.profile.name||'').slice(0,60),career:String(j.profile.career||'').slice(0,80),onboarded:!!j.profile.onboarded||(!!j.profile.name)};
+  if(j.intro&&['pending','done','skipped'].indexOf(j.intro.status)>=0)c.intro={status:j.intro.status,at:RX.date.test(j.intro.at)?j.intro.at:null};
   return c;
 }
 const int15=v=>Number.isInteger(v)&&v>=15&&v<=240;
@@ -236,12 +263,56 @@ function exportICS(){
   toast('Listo: importa el archivo en Google Calendar, Outlook o Apple Calendar.');
 }
 
+/* --- Importar horario desde .ics: se lee en el navegador y no se guarda sin confirmación --- */
+async function onICSFile(inp){
+  const f=inp&&inp.files&&inp.files[0];if(!f)return;
+  inp.value='';
+  icsPending=null;icsEvaluations=[];
+  if(f.size>ICS_MAX_BYTES){icsNotice='El archivo .ics pesa más de 2 MB. No se guardó nada.';render();toast(icsNotice);return}
+  try{
+    const r=parseICS(await f.text());
+    icsNotice=r.warnings[0]||'';icsEvaluations=r.evaluations||[];
+    if(!r.blocks.length){
+      render();
+      toast(r.evaluations.length?'No encontré clases semanales: los eventos sueltos se muestran como posibles evaluaciones.':'No encontré horarios semanales en ese archivo.');
+      return;
+    }
+    icsPending=r.blocks.map(b=>({name:String(b.name).slice(0,80),day:b.day,start:b.start,end:b.end,count:b.count,location:b.location||'',keep:true,
+      courseId:S.courses.length?S.courses[0].id:'new'}));
+    render();
+    toast(`${icsPending.length} bloque(s) semanales detectados. Revísalos antes de confirmar.`);
+  }catch(e){icsNotice='No pude leer ese archivo .ics.';render();toast(icsNotice)}
+}
+function setICSBlock(i,k,v){if(icsPending&&icsPending[i])icsPending[i][k]=v}
+function cancelICS(){icsPending=null;icsNotice='';icsEvaluations=[];render()}
+function confirmICS(){
+  if(!icsPending)return;
+  let added=0,created=0;
+  icsPending.forEach(b=>{
+    if(!b.keep)return;
+    let cid=b.courseId;
+    if(!cid||cid==='new'||!course(cid)){
+      const name=String(b.name||'').trim().slice(0,80);if(!name)return;
+      cid=uid();S.courses.push({id:cid,name:name,difficulty:3,color:COLORS[S.courses.length%COLORS.length],grades:[]});created++;
+    }
+    if(S.classes.some(k=>k.courseId===cid&&k.day===b.day&&k.start===b.start&&k.end===b.end))return;
+    S.classes.push({id:uid(),courseId:cid,day:b.day,start:b.start,end:b.end});added++;
+  });
+  icsPending=null;icsNotice='';icsEvaluations=[];
+  if(introActive())introMark('done');
+  if(added||created){save();replanAll();toast(`${added} clase(s) agregadas${created?` y ${created} ramo(s) creados`:''}.`)}
+  render();
+}
+
 function fillUdeC(){S.support={name:'DISE UdeC · Bienestar Estudiantil',contact:'bienestar@udec.cl · dise.udec.cl'};save();toast('Guardado. Verifica horarios y cómo pedir hora en el sitio oficial.');render()}
 function saveSupport(){S.support={name:$('#sn').value.trim().slice(0,120),contact:$('#sc').value.trim().slice(0,300)};save();toast('Guardado en este navegador.');render()}
 
 async function loadDemo(){
   if(S.courses.length&&!await askConfirm({title:'Cargar datos de ejemplo',text:'Esto reemplazará tus datos actuales por los del ejemplo.',okLabel:'Cargar'}))return;
+  const perfil=S.profile;
   S=fresh();inval();const t=today();
+  if(perfil&&perfil.onboarded)S.profile=perfil;
+  S.intro={status:'done',at:t};                     // quien ve el ejemplo ya conoce la app
   S.consent={health:true,at:t};                    // el ejemplo activa el check-in para poder probarlo
   const C0=(n,d,i)=>({id:uid(),name:n,difficulty:d,color:COLORS[i]});
   const cs=[C0('Cálculo III',5,0),C0('Termodinámica',4,1),C0('Estadística',3,2),C0('Economía',2,3)];
