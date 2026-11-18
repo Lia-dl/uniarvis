@@ -28,7 +28,7 @@ function viewInicio(){
     <span class="home-icon">${String(i+1).padStart(2,'0')}</span>
     <span class="home-copy"><b>${s.label}</b><span>${descs[s.key]||''}</span></span>
     <span class="home-arrow" aria-hidden="true">→</span></button>`).join('');
-  return `
+  return `${screenHelp('inicio')}
   <div class="home-head"><div><h2>Hola, ${name}</h2><p class="mute" style="margin-bottom:0">Elige por dónde empezar hoy.</p></div></div>
   ${!S.consent?consentCard():''}
   ${homeNotice()}
@@ -36,7 +36,7 @@ function viewInicio(){
 }
 function viewPerfil(){
   const p=S.profile||{};
-  return `<div class="card"><h2>Perfil</h2>
+  return `${screenHelp('perfil')}<div class="card"><h2>Perfil</h2>
     <p class="mute" style="margin-top:0">Tu nombre y tu carrera se guardan solo en este navegador y sirven para personalizar el saludo y el plan.</p>
     <div class="hud-form" style="max-width:520px">
       <label>Nombre<input id="pf-name" type="text" maxlength="60" value="${esc(p.name||'')}"></label>
@@ -111,7 +111,7 @@ function viewHoy(){
     if(!t.done){acc+=t.minutes;if(acc>=50&&todays.slice(i+1).some(x=>!x.done)){rows+=`<div class="pause">🌿 <span style="flex:1">Pausa de 5 min: estírate o haz 1 minuto de respiración.</span><button class="btn sec" onclick="goBreath('larga')">Respirar</button></div>`;acc=0}}
   });
   const opts=S.courses.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
-  return `
+  return `${screenHelp('hoy')}
   ${!S.courses.length?'<div class="card empty">Aún no tienes ramos. Agrégalos en "Mis ramos y horario" o <button class="btn" onclick="go(\'ejemplos\')">carga datos de ejemplo</button></div>':''}
   ${checkinForm(false)}
   ${warnHtml()}${criticalHtml()}
@@ -130,7 +130,7 @@ function viewHoy(){
   </div>
   <div class="grid2">
     <div class="card"><h3>Plan de hoy</h3>
-      ${rows||'<div class="empty">No hay micro-tareas para hoy.</div>'}
+      ${rows||'<div class="empty">No hay micro-tareas para hoy. Agrega ramos y fechas en <b>Académico &gt; Syllabus y fechas</b> para generar tu plan, o registra estudio libre.</div>'}
       ${locked?'<p class="mute">No se adelanta ni se asigna más materia hoy.</p>':
         (low?'<p class="mute">Hoy no hace falta adelantar nada.</p>':(!pend.length&&nxt?`<button class="btn sec" onclick="pullNext()">Adelantar la siguiente micro-tarea (${nxt.minutes} min)</button>`:''))}
     </div>
@@ -151,7 +151,7 @@ function viewHoy(){
 function viewSemana(){
   const days=[...Array(7)].map((_,i)=>addDays(weekStart,i)),t0=today(),H0=7,H1=22,HH=44;
   const crit=criticalClusters(),isCrit=d=>crit.some(g=>d>=g.start&&d<=g.end);
-  let h=`<div class="card"><div class="row" style="justify-content:space-between;margin-bottom:10px">
+  let h=`${screenHelp('semana')}<div class="card"><div class="row" style="justify-content:space-between;margin-bottom:10px">
     <h2 style="margin:0">Semana ${dshort(days[0])} – ${dshort(days[6])}</h2>
     <div class="row"><button class="btn sec" onclick="weekStart=addDays(weekStart,-7);render()">←</button>
     <button class="btn sec" onclick="weekStart=mondayOf(today());render()">Hoy</button>
@@ -182,7 +182,7 @@ function gradesCard(c){
   return `<div class="card grades-card"><div class="row" style="justify-content:space-between;align-items:flex-start">
       <div><h3 style="margin:0"><span class="dot" style="background:${c.color};display:inline-block;margin-right:6px"></span>${esc(c.name)}</h3>
       <div class="mute">Promedio actual (ponderado): <b class="hud-num">${sum.avg!=null?sum.avg.toFixed(2):'—'}</b> · Ponderado: ${sum.wsum}% ${sum.wsum>100?'<span style="color:var(--bad)">(&gt;100%)</span>':''} · Restante: ${Math.max(0,sum.rem)}%</div></div></div>
-    ${gs.length?`<table class="grades-tbl"><tr><th>Evaluación</th><th>Nota</th><th>Pond.</th><th></th></tr>${rows}</table>`:'<div class="mute" style="margin-top:8px">Sin evaluaciones registradas.</div>'}
+    ${gs.length?`<table class="grades-tbl"><tr><th>Evaluación</th><th>Nota</th><th>Pond.</th><th></th></tr>${rows}</table>`:'<div class="empty" style="margin-top:8px">Aún no hay evaluaciones. Completa los campos y toca <b>Agregar nota</b>.</div>'}
     <div class="row" style="margin-top:10px">
       <input id="gn-${c.id}" placeholder="Evaluación (ej. Certamen 1)">
       <input id="gs-${c.id}" type="number" step="0.1" placeholder="Nota" style="width:90px">
@@ -190,14 +190,14 @@ function gradesCard(c){
       <button class="btn sec" onclick="addGrade('${c.id}')">Agregar nota</button></div></div>`;
 }
 function viewRamos(){
-  return `
+  return `${screenHelp('ramos')}
   <div class="grid2">
     <div class="card"><h2>Mis ramos</h2>
       ${S.courses.map(c=>{const col=collective(c.name);return `<div class="task"><span class="dot" style="background:${c.color}"></span><b style="flex:1">${esc(c.name)}</b>
         ${col?`<span class="mute">datos: dif. ${col.diff.toFixed(1)} <button class="lnk" onclick="setDiff('${c.id}',${Math.round(col.diff)})">usar</button></span>`:''}
         <span class="mute">dificultad</span>
         <select onchange="setDiff('${c.id}',this.value)">${[1,2,3,4,5].map(n=>`<option ${n===c.difficulty?'selected':''}>${n}</option>`).join('')}</select>
-        <button class="btn del" onclick="delCourse('${c.id}')">Eliminar</button></div>`}).join('')||'<div class="empty">Sin ramos todavía.</div>'}
+        <button class="btn del" onclick="delCourse('${c.id}')">Eliminar</button></div>`}).join('')||'<div class="empty">Aún no tienes ramos. Escribe el nombre y toca <b>Agregar</b> para crear tu primer ramo.</div>'}
       <div class="row" style="margin-top:10px"><input id="cn" placeholder="Nombre del ramo">
         <select id="cd" title="Dificultad">${[1,2,3,4,5].map(n=>`<option ${n===3?'selected':''}>${n}</option>`).join('')}</select>
         <button class="btn" onclick="addCourse()">Agregar</button></div>
@@ -217,7 +217,7 @@ function viewRamos(){
 function viewSyllabus(){
   const opts=S.courses.map(c=>`<option value="${c.id}" ${c.id===sylCourse?'selected':''}>${esc(c.name)}</option>`).join('');
   const sorted=[...S.events].sort((a,b)=>a.date.localeCompare(b.date));
-  return `
+  return `${screenHelp('syllabus')}
   <div class="card"><h2>Subir syllabus</h2>
     <div class="row" style="margin-bottom:8px"><select onchange="sylCourse=this.value"><option value="">Elige el ramo…</option>${opts}</select>
       <input type="file" accept=".pdf,.txt,.md,.csv" onchange="onFile(this)"></div>
@@ -240,17 +240,17 @@ function viewSyllabus(){
       <button class="btn sec" onclick="exportICS()" ${S.events.length?'':'disabled'}>Exportar a calendario (.ics)</button></div>
     ${sorted.map(e=>`<div class="task"><span class="dot" style="background:${ccolor(e.courseId)}"></span>
       <span style="flex:1">${dshort(e.date)} · <b>${TYPE_LABEL[e.type]}</b> · ${esc(cname(e.courseId))} — ${esc(e.title)}${e.early?' <span class="tag">margen extra</span>':''}</span>
-      <button class="btn del" onclick="delEvent('${e.id}')">Quitar</button></div>`).join('')||'<div class="empty">Sin fechas registradas.</div>'}
+      <button class="btn del" onclick="delEvent('${e.id}')">Quitar</button></div>`).join('')||'<div class="empty">Aún no hay fechas registradas. Analiza un syllabus o usa el formulario y toca <b>Agregar manualmente</b>.</div>'}
   </div>`;
 }
 function viewNotas(){
-  return `<div class="card"><h2>Notas y ponderaciones</h2>
+  return `${screenHelp('notas')}<div class="card"><h2>Notas y ponderaciones</h2>
     <p class="mute" style="margin-top:0">Registra evaluaciones por ramo con su nota y ponderación (%). El promedio ponderado se calcula automáticamente y se guarda en este navegador.</p>
-    ${S.courses.length?S.courses.map(gradesCard).join(''):'<div class="empty">Agrega un ramo para registrar sus notas.</div>'}
+    ${S.courses.length?S.courses.map(gradesCard).join(''):'<div class="empty">Aún no tienes ramos. Ve a <b>Académico &gt; Mis ramos y horario</b> y toca <b>Agregar</b> para crear uno.</div>'}
   </div>`;
 }
 function viewDatosEjemplo(){
-  return `<div class="card"><h2>Datos de ejemplo</h2>
+  return `${screenHelp('ejemplos')}<div class="card"><h2>Datos de ejemplo</h2>
     <p class="mute" style="margin-top:0">Carga ramos, clases, fechas, sesiones pasadas y registros de bienestar falsos para recorrer la app sin datos personales. Reemplaza tus datos actuales.</p>
     <div class="row"><button class="btn sec" onclick="loadDemo()">Cargar datos de ejemplo</button>
     <span class="mute">Las demás opciones de datos están en Ajustes → Privacidad, donde también puedes descargar un respaldo antes.</span></div></div>`;
@@ -264,7 +264,7 @@ function viewCheckin(){
   if(!draft)loadDraft();
   const ok=S.consent&&S.consent.health,pt=ok?patterns():null;
   const recent=[...S.wellbeing.diary].sort((a,b)=>b.date.localeCompare(a.date));
-  return `
+  return `${screenHelp('checkin')}
   <div class="card"><h2>Check-in, diario y patrones</h2>
     <div class="mute">Guía de autocuidado: no es un diagnóstico ni un tratamiento. Tus registros se guardan solo en este navegador.</div></div>
   ${warnHtml()}
@@ -278,12 +278,12 @@ function viewCheckin(){
     ${recent.slice(0,10).map(e=>`<div class="task"><span style="font-size:22px">${MOODS[e.mood-1][0]}</span>
       <span style="flex:1"><b>${dshort(e.date)}</b> · Ánimo ${MOODS[e.mood-1][1].toLowerCase()}${e.energy!=null?` · Energía ${ENERGY[e.energy-1][1].toLowerCase()} · Sueño ${SLEEP[e.sleep-1][1]}`:''}
       ${(e.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join(' ')}${e.note?`<br><span class="mute">${esc(e.note)}</span>`:''}</span>
-      <button class="btn del" onclick="delDiary('${e.date}')">Borrar</button></div>`).join('')||'<div class="empty">Aún no hay registros.</div>'}</div>`:''}`;
+      <button class="btn del" onclick="delDiary('${e.date}')">Borrar</button></div>`).join('')||'<div class="empty">Aún no hay registros. Guarda tu check-in de hoy para comenzar tu historial.</div>'}</div>`:''}`;
 }
 function viewBienestar(){return viewCheckin()}
 function viewRespiracion(){
   const T=TECH[bsel];
-  return `
+  return `${screenHelp('respiracion')}
   <div class="card"><h2>Respiración y meditaciones</h2>
     <div class="mute">Herramientas breves para bajar la activación. No son un tratamiento: solo te ayudan a hacer una pausa consciente.</div></div>
   <div class="grid2">
@@ -304,7 +304,7 @@ function viewRespiracion(){
   </div>`;
 }
 function viewPausas(){
-  return `
+  return `${screenHelp('pausas')}
   <div class="card"><h2>Pausas rápidas</h2>
     <div class="pgrid">
       <div class="pcard"><b>Muévete 5 minutos</b><br>Camina o estira cuello, hombros y espalda tras cada bloque de estudio.</div>
@@ -317,7 +317,7 @@ function viewPausas(){
 }
 function viewApoyo(){
   const sp=S.support;
-  return `
+  return `${screenHelp('apoyo')}
   <div class="card"><h2>Apoyo</h2>
     <p style="margin-top:0">Esta app te ayuda a organizarte y a cuidarte, pero <b>no reemplaza a un profesional de la salud</b>. Si algo de lo que sientes te pesa o dura varios días, hablarlo con alguien es una buena decisión, no una señal de debilidad.</p>
     <p class="mute" style="margin-bottom:0">Conviene buscar apoyo si hace semanas te cuesta dormir, comer o concentrarte, si te sientes sin ganas de nada o sobrepasado/a, o si estudiar se volvió fuente constante de angustia.</p></div>
@@ -341,7 +341,7 @@ function viewApoyo(){
 }
 function viewPrivacidad(){
   const ok=S.consent&&S.consent.health;
-  return `<div class="card"><h2>Privacidad y mis datos</h2>
+  return `${screenHelp('privacidad')}<div class="card"><h2>Privacidad y mis datos</h2>
     <ul style="margin:0 0 10px 18px;padding:0">
       <li>Por defecto todo se guarda <b>solo en este navegador</b> y la app no hace peticiones externas. Puedes usarla siempre sin cuenta.</li>
       <li>Si activas la sección <i>Amigos</i> e inicias sesión, al servidor van <b>solo</b> tu nombre visible, tu código de amigo, tus relaciones de amistad, las fechas de los ramos que marques explícitamente como compartidos y tus sesiones de estudio.</li>
@@ -362,7 +362,7 @@ function viewPrivacidad(){
   </div>`;
 }
 function viewSalud(){
-  if(!S.courses.length)return '<div class="card empty">Agrega ramos para ver tu mapa de calor.</div>';
+  if(!S.courses.length)return screenHelp('salud')+'<div class="card empty">Aún no tienes ramos. Ve a <b>Académico &gt; Mis ramos y horario</b> y toca <b>Agregar</b> para ver tu mapa de calor.</div>';
   const t0=today(),N=14,sumD=S.courses.reduce((a,c)=>a+c.difficulty,0);
   const dates=[...Array(N)].map((_,i)=>addDays(t0,i-N+1));
   const rows=S.courses.map(c=>{
@@ -379,7 +379,7 @@ function viewSalud(){
   });
   const cls=v=>v===0?'h0':v<0.5?'h1':v<0.9?'h2':v<=1.3?'h3':'h4';
   const alerts=rows.filter(r=>r.risk);
-  return `
+  return `${screenHelp('salud')}
   <div class="card"><h2>Mapa de calor de salud académica</h2>
     ${alerts.length?alerts.map(r=>`<div class="banner go"><b>${esc(r.c.name)}</b>: tienes "${esc(r.nextEv.title)}" en ${r.days2} día(s) y esta semana le diste poca atención (${Math.round(r.a7*100)}% de lo recomendado). Quizá convenga reequilibrar un poco.</div>`).join('')
       :'<div class="banner min">Sin desequilibrios importantes frente a tus próximas evaluaciones.</div>'}
@@ -399,12 +399,12 @@ function viewSalud(){
 }
 function viewDatos(){
   const agg=aggRatings();
-  return `
+  return `${screenHelp('datos')}
   <div class="card"><h2>Datos de ramos (anónimos y agregados)</h2>
     <p class="mute" style="margin-top:0">En vez de reseñas con texto libre (que traen problemas de moderación, difamación y sesgo), aquí solo hay números anónimos: carga, dificultad, tipo de evaluación y horas por semana. No se muestra ningún promedio hasta tener al menos ${MIN_N} aportes por ramo.</p>
     ${agg.map(a=>`<div class="task"><b style="flex:1">${esc(a.name)}</b>
       ${a.n>=MIN_N?`<span class="tag">Carga ${a.load.toFixed(1)}/5</span><span class="tag">Dificultad ${a.diff.toFixed(1)}/5</span><span class="tag">${EVAL_TYPES[a.evalType]}</span><span class="tag">~${a.hours.toFixed(0)} h/semana</span><span class="mute">n=${a.n}</span>`
-      :`<span class="mute">Faltan aportes (${a.n} de ${MIN_N}) para mostrar datos</span>`}</div>`).join('')||'<div class="empty">Aún no hay aportes.</div>'}
+      :`<span class="mute">Faltan aportes (${a.n} de ${MIN_N}) para mostrar datos</span>`}</div>`).join('')||'<div class="empty">Aún no hay aportes. Selecciona un ramo abajo y toca <b>Aportar</b> para agregar el primero.</div>'}
   </div>
   <div class="grid2">
     <div class="card"><h3>Aportar mis datos de un ramo (anónimo)</h3>
@@ -426,7 +426,7 @@ function viewDatos(){
 function viewTema(){
   const th=themeOk(S.settings&&S.settings.theme)?S.settings.theme:'cian';
   const md=modeOk(S.settings&&S.settings.mode)?S.settings.mode:'light';
-  return `
+  return `${screenHelp('tema')}
   <div class="card"><h2>Apariencia</h2>
     <p style="margin-top:0">Escoge el color de la aplicación y el modo de luz. La elección se guarda solo en este navegador.</p>
     <h3>Color de la aplicación</h3>
@@ -444,14 +444,15 @@ function viewTema(){
         <div class="preview-line"></div>
       </div>
     </div>
-  </div>`;
+  </div>
+  <div class="card"><h3>Tutorial</h3><p class="mute" style="margin-top:0">Puedes volver a ver la guía de bienvenida con los pasos de cada sección.</p><button class="btn sec" onclick="startTour(true)">Ver tutorial de nuevo</button></div>`;
 }
 function viewAmigos(){
-  if(!socialConfigured())return `<div class="card"><h2>Amigos</h2>
+  if(!socialConfigured())return `${screenHelp('amigos')}<div class="card"><h2>Amigos</h2>
     <p style="margin-top:0">Esta función es opcional y <b>todavía no está configurada</b>. Para activarla, sigue la guía en <i>docs/SUPABASE.md</i> y completa <i>js/config.js</i> con la URL y la anon key de tu proyecto.</p>
     <p class="mute">Mientras tanto la app funciona exactamente como antes: todo se guarda solo en este navegador y no se envía nada a ningún servidor.</p>
     <button class="btn" onclick="socialStartDemo()">Probar con datos de ejemplo</button></div>`;
-  if(!socialAuth())return `<div class="card"><h2>Amigos</h2>
+  if(!socialAuth())return `${screenHelp('amigos')}<div class="card"><h2>Amigos</h2>
     ${socialDemoBanner()}
     <p style="margin-top:0">${socialDemoActive()?'Coordina sesiones de estudio y comparte fechas con amigos de ejemplo. El acceso es simulado: cualquier correo y cualquier código de 6 dígitos funcionan.':'Coordina sesiones de estudio y comparte fechas con amigos. El acceso es con un código de 6 dígitos que llega a tu correo (sin enlaces ni redirecciones).'}</p>
     ${SOC.step==='code'?`<div class="soc-flow">
@@ -464,14 +465,14 @@ function viewAmigos(){
       <p class="mute">Sin iniciar sesión la app sigue siendo 100 % local: tus datos de bienestar nunca salen de este dispositivo.</p></div>`}
     ${SOC.msg?`<div class="banner info">${esc(SOC.msg)}</div>`:''}
   </div>`;
-  if(SOC.step==='name')return `<div class="card"><h2>Tu nombre visible</h2>
+  if(SOC.step==='name')return `${screenHelp('amigos')}<div class="card"><h2>Tu nombre visible</h2>
     ${socialDemoBanner()}
     <p style="margin-top:0">¿Cómo quieres que te vean tus amigos? ${socialDemoActive()?'Este nombre se guarda solo en el ejemplo.':'Solo se guarda este nombre en el servidor.'} No enviamos tu carrera, tus notas ni ningún dato de bienestar.</p>
     <div class="row"><input id="soc-name" maxlength="60" placeholder="Tu nombre" value="${esc(S.profile&&S.profile.name||'')}">
     <button class="btn" ${SOC.busy?'disabled':''} onclick="socialSubmitName()">Crear mi perfil</button></div>
     ${SOC.msg?`<div class="banner info">${esc(SOC.msg)}</div>`:''}
     <p class="mute" style="margin-bottom:0">${socialDemoActive()?'Podrás cambiarlo si sales y vuelves a entrar al modo demo.':'Podrás cambiarlo más adelante desde tu perfil del servidor.'}</p></div>`;
-  if(!SOC.ready||!SOC.profile)return `<div class="card"><h2>Amigos</h2>
+  if(!SOC.ready||!SOC.profile)return `${screenHelp('amigos')}<div class="card"><h2>Amigos</h2>
     ${socialDemoBanner()}
     ${SOC.error?`<div class="banner go"><b>No se pudo conectar.</b> ${esc(SOC.error)} El resto de la app sigue funcionando con tus datos locales.
       <div class="row" style="margin-top:8px"><button class="btn sec" onclick="socialOpenTab()">Reintentar</button></div></div>`
@@ -495,7 +496,7 @@ function viewAmigos(){
   const shared=socialFriendsShared(),groups={};
   shared.forEach(e=>{(groups[e.owner]=groups[e.owner]||[]).push(e)});
   const imported=S.events.filter(e=>e.src).sort((a,b)=>a.date.localeCompare(b.date));
-  return `
+  return `${screenHelp('amigos')}
   <div class="card hud-welcome">${socialDemoBanner()}
   ${SOC.msg?`<div class="banner info">${esc(SOC.msg)}</div>`:''}
   <div class="row" style="justify-content:space-between;align-items:flex-start">
@@ -517,13 +518,13 @@ function viewAmigos(){
       <h4>Solicitudes recibidas</h4>
       ${SOC.incoming.map(x=>`<div class="task"><span style="flex:1">${esc(x.person.display_name)}</span>
         <button class="btn sec" onclick="socialRespondFriend('${esc(x.id)}',true)">Aceptar</button>
-        <button class="btn del" onclick="socialRespondFriend('${esc(x.id)}',false)">Rechazar</button></div>`).join('')||'<div class="empty">No hay solicitudes recibidas.</div>'}
+        <button class="btn del" onclick="socialRespondFriend('${esc(x.id)}',false)">Rechazar</button></div>`).join('')||'<div class="empty">No hay solicitudes recibidas. Cuando alguien te agregue, aparecerá aquí.</div>'}
       <h4>Solicitudes enviadas</h4>
-      ${SOC.outgoing.map(x=>`<div class="task"><span style="flex:1">${esc(x.person.display_name)}</span><span class="tag soc-wait">Esperando respuesta</span></div>`).join('')||'<div class="empty">No hay solicitudes enviadas.</div>'}
+      ${SOC.outgoing.map(x=>`<div class="task"><span style="flex:1">${esc(x.person.display_name)}</span><span class="tag soc-wait">Esperando respuesta</span></div>`).join('')||'<div class="empty">No hay solicitudes enviadas. Ingresa un código arriba para invitar a alguien.</div>'}
     </div>
     <div class="card"><h3>Mis amigos</h3>
       ${SOC.friends.map(p=>`<div class="task"><span class="dot" style="background:var(--accent)"></span>
-        <span style="flex:1">${esc(p.display_name)}</span><button class="btn del" onclick="socialRemoveFriend('${esc(p.id)}')">Quitar</button></div>`).join('')||'<div class="empty">Aún no tienes amigos. Comparte tu código o pide el de alguien más.</div>'}
+        <span style="flex:1">${esc(p.display_name)}</span><button class="btn del" onclick="socialRemoveFriend('${esc(p.id)}')">Quitar</button></div>`).join('')||'<div class="empty">Aún no tienes amigos. Comparte tu código o ingresa el de otra persona y toca <b>Enviar solicitud</b>.</div>'}
       <p class="mute" style="margin-bottom:0">No hay rachas, puntos ni comparaciones de tiempo: esto es solo para organizarse juntos.</p>
     </div>
   </div>
@@ -536,17 +537,17 @@ function viewAmigos(){
       <input id="ss-place" placeholder="Lugar o enlace" style="flex:1;min-width:180px"></div>
     <textarea id="ss-note" placeholder="Nota para quienes vayan (opcional)" style="margin-top:8px"></textarea>
     <p class="mute" style="margin:10px 0 6px">Invitar a:</p>
-    <div class="soc-checks">${SOC.friends.map(p=>`<label class="soc-check"><input type="checkbox" name="ss-guest" value="${esc(p.id)}"> ${esc(p.display_name)}</label>`).join('')||'<span class="mute">Agrega amigos para poder invitarlos.</span>'}</div>
+    <div class="soc-checks">${SOC.friends.map(p=>`<label class="soc-check"><input type="checkbox" name="ss-guest" value="${esc(p.id)}"> ${esc(p.display_name)}</label>`).join('')||'<span class="mute">Aún no tienes amigos. Agrega amigos para poder invitarlos a una sesión.</span>'}</div>
     <div class="row" style="margin-top:10px"><button class="btn" ${SOC.busy||!SOC.friends.length?'disabled':''} onclick="socialCreateSession()">Crear sesión</button></div>
     <h4>Próximas sesiones que organizo</h4>
-    ${organized.map(s=>`${sessionRow(s)}<div class="soc-guests">${guestTags(s)||'<span class="mute">Sin invitados</span>'}</div>`).join('')||'<div class="empty">No tienes sesiones organizadas.</div>'}
+    ${organized.map(s=>`${sessionRow(s)}<div class="soc-guests">${guestTags(s)||'<span class="mute">Sin invitados</span>'}</div>`).join('')||'<div class="empty">No tienes sesiones organizadas. Completa el formulario y toca <b>Crear sesión</b>.</div>'}
     <h4>Sesiones a las que me invitaron</h4>
-    ${invited.map(sessionRow).join('')||'<div class="empty">No te han invitado a ninguna sesión.</div>'}
+    ${invited.map(sessionRow).join('')||'<div class="empty">No te han invitado a ninguna sesión. Cuando te inviten, aparecerá aquí.</div>'}
   </div>
   <div class="card"><h3>Fechas compartidas</h3>
     <p class="mute" style="margin-top:0">Escoge tus ramos. Solo se envían el nombre del ramo, el título, el tipo y la fecha de cada evaluación, entrega o control.</p>
     ${S.courses.map(c=>`<div class="share-row"><span class="dot" style="background:${c.color}"></span><b style="flex:1">${esc(c.name)}</b>
-      <label class="soc-switch"><input type="checkbox" ${c.share?'checked':''} onchange="setShare('${esc(c.id)}',this.checked)"> Compartir las fechas de este ramo con mis amigos</label></div>`).join('')||'<div class="empty">Agrega ramos para poder compartir fechas.</div>'}
+      <label class="soc-switch"><input type="checkbox" ${c.share?'checked':''} onchange="setShare('${esc(c.id)}',this.checked)"> Compartir las fechas de este ramo con mis amigos</label></div>`).join('')||'<div class="empty">Aún no tienes ramos. Agrega ramos en <b>Académico</b> para poder compartir sus fechas.</div>'}
     <h4>Fechas que comparten mis amigos</h4>
     ${Object.keys(groups).map(o=>`<div class="soc-friend-group"><h4>${esc(socialName(o))}</h4>
       ${groups[o].sort((a,b)=>a.date.localeCompare(b.date)).map((e,i)=>{
@@ -554,7 +555,7 @@ function viewAmigos(){
         return `<div class="task"><span style="flex:1"><b>${dshort(e.date)}</b> · ${esc(TYPE_LABEL[e.type]||e.type)} · ${esc(e.course_name)} — ${esc(e.title)}</span>
           <select id="soc-imp-${o.slice(0,6)}-${i}" aria-label="Ramo destino">${S.courses.map(c=>`<option value="${esc(c.id)}" ${match&&c.id===match.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select>
           <button class="btn sec" ${S.courses.length?'':'disabled'} onclick="socialImportEvent('${esc(e.owner)}','${esc(e.id)}',document.getElementById('soc-imp-${o.slice(0,6)}-${i}').value)">Agregar a mis fechas</button></div>`;
-      }).join('')}</div>`).join('')||'<div class="empty">Por ahora nadie ha compartido fechas contigo.</div>'}
+      }).join('')}</div>`).join('')||'<div class="empty">Por ahora nadie ha compartido fechas contigo. Pide a tus amigos que compartan fechas de sus ramos.</div>'}
     ${imported.length?`<h4>Fechas que ya importé</h4>${imported.map(e=>`<div class="task"><span style="flex:1">${dshort(e.date)} · ${esc(TYPE_LABEL[e.type]||e.type)} · ${esc(cname(e.courseId))} — ${esc(e.title)}</span><span class="tag soc-ok">Ya en tus fechas</span></div>`).join('')}`:''}
   </div>`;
 }
