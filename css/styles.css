@@ -361,6 +361,27 @@ filter:blur(10px);opacity:.9;animation:hudPulse 8s ease-in-out infinite alternat
 .modal-head h3{margin:0}
 .icon-btn{width:32px;height:32px;border-radius:10px;border:1px solid var(--line);background:var(--bg-subtle);color:var(--mute);cursor:pointer;font-size:16px;line-height:1}
 .icon-btn:hover{color:var(--ink);border-color:var(--accent)}
+#modal .modal-card{position:relative;padding:26px 22px 20px;animation:modalIn .22s cubic-bezier(.2,.9,.3,1) both}
+#modal .modal-close{position:absolute;top:12px;right:14px}
+@keyframes modalIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){#modal .modal-card{animation:none}}
+.frase-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.frase-head h3{margin:0}
+.frase-body{display:flex;align-items:flex-start;gap:14px}
+.frase-avatar{width:52px;height:52px;flex:0 0 52px;border-radius:50%;display:grid;place-items:center;background:rgba(var(--accent-rgb),.12);border:1px solid rgba(var(--accent-rgb),.28);font-size:26px}
+.frase-texto{margin:0;flex:1;min-width:0;padding-left:14px;border-left:2px solid rgba(var(--accent-rgb),.35)}
+.frase-texto p{margin:0;color:var(--ink);line-height:1.6}
+.frase-texto cite{display:block;margin-top:6px;color:var(--mute);font-size:13px;font-style:normal}
+.frase-texto .tag{display:inline-block;margin-top:10px}
+.frase-consejo{margin:14px 0 0;padding:10px 12px;border-radius:12px;background:var(--bg-subtle);border:1px solid var(--line);color:var(--mute);font-size:13px;line-height:1.55}
+.frase-consejo b{color:var(--ink)}
+.frase-card .row{margin-top:12px}
+.frases-modal h3{margin:0 34px 12px 0}
+.frases-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.frases-tabs .btn.on{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.frases-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.frase-actions{margin-top:14px;flex-wrap:wrap}
+@media (max-width:640px){.frase-body{gap:10px}.frase-avatar{width:42px;height:42px;flex-basis:42px;font-size:22px}.frase-texto{padding-left:10px}.frase-actions .btn{flex:1 1 auto}}
 .help-steps{margin:8px 0 0 20px;padding:0;display:grid;gap:6px;line-height:1.55}
 .tour-backdrop{z-index:30}
 .tour-modal{position:relative;text-align:center;padding:28px 26px 22px}

@@ -384,6 +384,7 @@ function viewCheckin(){
   const ok=S.consent&&S.consent.health,pt=ok?patterns():null;
   const recent=[...S.wellbeing.diary].sort((a,b)=>b.date.localeCompare(a.date));
   return `${screenHelp('checkin')}
+  ${fraseCardHtml()}
   <div class="card"><h2>Check-in, diario y patrones</h2>
     <div class="mute">Guía de autocuidado: no es un diagnóstico ni un tratamiento. Tus registros se guardan solo en este navegador.</div></div>
   ${warnHtml()}

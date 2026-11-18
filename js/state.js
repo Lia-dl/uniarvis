@@ -65,10 +65,12 @@ function cleanTools(t){
 }
 const migrateTools=t=>cleanTools(t);
 const fresh=()=>({courses:[],classes:[],events:[],tasks:[],sessions:[],settings:{min:60,theme:'cian',mode:'light',style:'calma',arvis:true},lastPlan:null,
-  wellbeing:{diary:[]},createdAt:today(),lastBackup:null,backupSnooze:null,consent:null,soft:null,adapt:null,moved:null,dismissed:{},support:{name:'',contact:''},profile:{name:'',career:'',onboarded:false},intro:{status:'pending',at:null},tools:freshTools()});
+  wellbeing:{diary:[]},frases:{favs:[]},createdAt:today(),lastBackup:null,backupSnooze:null,consent:null,soft:null,adapt:null,moved:null,dismissed:{},support:{name:'',contact:''},profile:{name:'',career:'',onboarded:false},intro:{status:'pending',at:null},tools:freshTools()});
 function migrate(s){
   const f=fresh();for(const k in f)if(s[k]===undefined)s[k]=f[k];
   if(!s.wellbeing||!Array.isArray(s.wellbeing.diary))s.wellbeing={diary:[]};
+  if(!s.frases||typeof s.frases!=='object'||Array.isArray(s.frases)||!Array.isArray(s.frases.favs))s.frases={favs:[]};
+  else s.frases.favs=[...new Set(s.frases.favs.filter(id=>typeof id==='string'&&FRASES.some(f=>f.id===id)))].slice(0,200);
   if(!s.settings||typeof s.settings!=='object')s.settings={};
   if(!s.settings.min)s.settings.min=60;
   if(!themeOk(s.settings.theme))s.settings.theme='cian';

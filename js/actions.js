@@ -223,6 +223,10 @@ function validState(j){
     for(const e of dia)if(!(e&&RX.date.test(e.date)&&[e.mood,e.energy,e.sleep].every(v=>v==null||int(v,1,5))&&(e.tags===undefined||(Array.isArray(e.tags)&&e.tags.every(t=>str(t,40))))&&(e.note===undefined||str(e.note,5000))))return 'diario';
   }
   if(j.tools!==undefined&&!validTools(j.tools))return 'herramientas';
+  if(j.frases!==undefined){
+    if(!j.frases||typeof j.frases!=='object'||Array.isArray(j.frases)||!Array.isArray(j.frases.favs))return 'frases';
+    for(const id of j.frases.favs)if(typeof id!=='string'||!FRASES.some(f=>f.id===id))return 'frases';
+  }
   return null;
 }
 function cleanState(j){
@@ -235,6 +239,7 @@ function cleanState(j){
     grades:(x.grades||[]).map(g=>({id:g.id,name:String(g.name||'').slice(0,80),score:+g.score,weight:+g.weight}))}));
   c.settings={min:int15(j.settings&&j.settings.min)?j.settings.min:60,theme:themeOk(j.settings&&j.settings.theme)?j.settings.theme:'cian',mode:modeOk(j.settings&&j.settings.mode)?j.settings.mode:'light',arvis:!(j.settings&&j.settings.arvis===false)};
   c.tools=cleanTools(j.tools);
+  c.frases={favs:[...new Set(((j.frases&&j.frases.favs)||[]).filter(id=>FRASES.some(f=>f.id===id)))].slice(0,200)};
   c.wellbeing={diary:((j.wellbeing&&j.wellbeing.diary)||[]).map(e=>({date:e.date,mood:e.mood??null,energy:e.energy??null,sleep:e.sleep??null,tags:e.tags||[],note:e.note||'',ts:Number(e.ts)||0}))};
   c.support={name:String((j.support&&j.support.name)||'').slice(0,120),contact:String((j.support&&j.support.contact)||'').slice(0,300)};
   c.consent=j.consent&&typeof j.consent.health==='boolean'?{health:j.consent.health,at:today()}:null;

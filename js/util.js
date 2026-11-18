@@ -77,6 +77,33 @@ function askConfirm({title='¿Confirmar?',text='',okLabel='Continuar',danger=fal
       if(e.shiftKey&&document.activeElement===f[0]){e.preventDefault();f[f.length-1].focus()}
       else if(!e.shiftKey&&document.activeElement===f[f.length-1]){e.preventDefault();f[0].focus()}
     };
-    setTimeout(()=>{try{(input||okBtn).focus({preventScroll:true})}catch(e){(input||okBtn).focus()}},0);
+    try{(input||okBtn).focus({preventScroll:true})}catch(e){try{(input||okBtn).focus()}catch(f){}}
   });
+}
+let modalReturn=null;
+function openModal(html,label='Ventana de diálogo'){
+  const root=$('#modal');if(!root)return;
+  const prev=document.activeElement;
+  if(!(prev&&typeof prev.closest==='function'&&prev.closest('#modal')))modalReturn=prev;
+  root.hidden=false;
+  root.innerHTML=`<div class="modal-backdrop"><div class="modal-card" role="dialog" aria-modal="true" aria-label="${esc(label)}" tabindex="-1">
+    <button class="icon-btn modal-close" type="button" aria-label="Cerrar" onclick="closeModal()">✕</button>
+    <div class="modal-content">${html}</div></div></div>`;
+  const back=root.querySelector('.modal-backdrop'),dlg=root.querySelector('[role="dialog"]');
+  back.onclick=e=>{if(e.target===back)closeModal()};
+  dlg.onkeydown=e=>{
+    if(e.key==='Escape'){e.preventDefault();closeModal();return}
+    if(e.key!=='Tab')return;
+    const f=[...dlg.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled])')];
+    if(!f.length)return;
+    if(e.shiftKey&&(document.activeElement===f[0]||document.activeElement===dlg)){e.preventDefault();f[f.length-1].focus()}
+    else if(!e.shiftKey&&document.activeElement===f[f.length-1]){e.preventDefault();f[0].focus()}
+  };
+  try{dlg.focus({preventScroll:true})}catch(e){try{dlg.focus()}catch(f){}}
+}
+function closeModal(){
+  const root=$('#modal');if(!root)return;
+  root.innerHTML='';root.hidden=true;
+  const back=modalReturn;modalReturn=null;
+  if(back&&document.contains(back))try{back.focus({preventScroll:true})}catch(e){}
 }
