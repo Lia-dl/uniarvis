@@ -1,4 +1,4 @@
-/* Entrenador Académico · Capacidad realista del día (clases + historial + check-in) */
+/* U.A.R.V.I.S. · Capacidad realista del día (clases + historial + check-in) */
 /* ===================== Capacidad realista del día ===================== */
 function sessMap(){if(C.sm)return C.sm;const m={};S.sessions.forEach(x=>m[x.date]=(m[x.date]||0)+x.minutes);return C.sm=m}
 const doneOn=d=>sessMap()[d]||0;

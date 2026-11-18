@@ -12,13 +12,18 @@ const path = require('path');
     if (await p.locator('#reg-name').count()) {
       await p.fill('#reg-name', 'Estudiante');
       await p.fill('#reg-career', 'Carrera');
-      await p.click('text=INICIAR SISTEMA');
+      await p.locator('.hud-btn').click();
     }
   };
   const open = async (sec, sub) => {
     await p.locator('.brand').click();
     if (sec !== 'Inicio') await p.locator('.home-card').filter({ hasText: sec }).click();
-    if (sub) await p.click('nav >> text="' + sub + '"');
+    if (sub) {
+      const navBtn = p.locator('nav .subtabs').locator('button', { hasText: sub });
+      const chipBtn = p.locator('.subchips').locator('button', { hasText: sub });
+      if (await chipBtn.count()) await chipBtn.first().click();
+      else await navBtn.first().click();
+    }
   };
   await p.goto('file://' + file);
   await onboard();

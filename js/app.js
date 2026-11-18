@@ -1,9 +1,9 @@
-/* Entrenador Académico · Render principal y arranque */
+﻿/* U.A.R.V.I.S. · Render principal y arranque */
 /* ===================== Render ===================== */
 const SECTIONS=[
   {key:'inicio',label:'Inicio',tabs:[]},
   {key:'planificacion',label:'Planificación',tabs:[['hoy','Hoy'],['semana','Semana']]},
-  {key:'academico',label:'Académico',tabs:[['ramos','Mis ramos y horario'],['syllabus','Syllabus y fechas'],['notas','Notas y ponderaciones'],['salud','Mapa de calor'],['datos','Datos de ramos']]},
+  {key:'academico',label:'Académico',tabs:[['ramos','Mis ramos y horario'],['syllabus','Syllabus y fechas'],['notas','Notas y ponderaciones'],['salud','Carga por semana'],['datos','Datos de ramos']]},
   {key:'bienestar',label:'Bienestar',tabs:[['checkin','Check-in'],['respiracion','Respiración y meditaciones'],['pausas','Pausas rápidas'],['apoyo','Apoyo']]},
   {key:'social',label:'Social',tabs:[['amigos','Amigos']]},
   {key:'ajustes',label:'Ajustes',tabs:[['perfil','Perfil'],['tema','Apariencia'],['privacidad','Privacidad'],['ejemplos','Datos de ejemplo']]}
@@ -27,7 +27,8 @@ function hashFor(r){return r.section==='inicio'?'#/inicio':'#/'+r.section+'/'+r.
 function routeFromHash(){
   const raw=decodeURIComponent(location.hash.replace(/^#\/?/,'')).replace(/\/+$/,'');
   if(!raw||raw==='inicio')return ROUTE.inicio;
-  const p=raw.split('/'),hit=ROUTE_BY_PATH[p[0]+'/'+(p[1]||'')];
+  const p=raw.split('/');
+  const hit=ROUTE_BY_PATH[p[0]+'/'+(p[1]||'')];
   if(hit)return hit;
   return FIRST[p[0]]?ROUTE[FIRST[p[0]]]:ROUTE.inicio;
 }
@@ -38,6 +39,18 @@ function renderTarget(desc){
   if(desc.id)return document.getElementById(desc.id);
   if(!desc.data)return null;
   return document.querySelector('[data-focus-id="'+String(desc.data).replace(/"/g,'\\"')+'"]');
+}
+const HOME_ICONS=[
+  '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M8 3.5v3M16 3.5v3M3.5 9.5h17M8 13h3M13 13h3M8 16h3"/></svg>',
+  '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 19.5h6.5a2 2 0 0 1 2 2v-13a3 3 0 0 0-3-3H4.5z"/><path d="M19.5 19.5H13a2 2 0 0 0-2 2v-13a3 3 0 0 1 3-3h5.5z"/></svg>',
+  '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20s-7-4.35-7-9.2A4.3 4.3 0 0 1 9.3 6.5c1.2 0 2.2.5 2.7 1.4.5-.9 1.5-1.4 2.7-1.4A4.3 4.3 0 0 1 19 10.8C19 15.65 12 20 12 20z"/></svg>',
+  '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="9" cy="8" r="3"/><circle cx="16.5" cy="9.5" r="2.5"/><path d="M3.5 18.5a5.5 5.5 0 0 1 11 0"/><path d="M14.5 18.5c0-1.8.9-3.4 2.3-4.3a4.2 4.2 0 0 1 5.7 3.8"/></svg>',
+  '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3"/><path d="M12 4.5v2.2M12 17.3v2.2M4.5 12h2.2M17.3 12h2.2M6.7 6.7l1.6 1.6M15.7 15.7l1.6 1.6M17.3 6.7l-1.6 1.6M8.3 15.7l-1.6 1.6"/></svg>'
+];
+function mobileNavHtml(){
+  const secs=SECTIONS.filter(s=>s.key!=='inicio');
+  const items=secs.map((s,i)=>`<button class="mob-nav-btn ${s.key===section?'on':''}" ${s.key===section?'aria-current="page"':''} onclick="go('${s.tabs[0][0]}')"><span class="mob-nav-icon">${HOME_ICONS[i]||''}</span><span>${s.label}</span></button>`).join('');
+  return `<nav class="mobile-nav" aria-label="Secciones">${items}</nav>`;
 }
 function render(){
   const key=LOCKED?'lock':(!S.profile||!S.profile.onboarded?'landing':section+'/'+tab);
@@ -72,25 +85,37 @@ function render(){
   applyTheme();
   if(LOCKED){
     document.body.classList.remove('landing-active');$('#nav').innerHTML='';
+    let mob=$('#mobile-nav');if(mob)mob.remove();
     app.innerHTML=lockView();finish($('#lp'));return;
   }
   if(!S.profile||!S.profile.onboarded){
     document.body.classList.add('landing-active');$('#nav').innerHTML='';
+    let mob=$('#mobile-nav');if(mob)mob.remove();
     app.innerHTML=viewLanding();finish($('#reg-name'));return;
   }
   document.body.classList.remove('landing-active');
   const who=S.profile&&S.profile.name?`<span class="hud-user"> · ${esc(S.profile.name)}</span>`:'';
-  const brand=document.querySelector('.brand');if(brand)brand.innerHTML='Entrenador Académico'+who;
-  if(section==='inicio')$('#nav').innerHTML='';
-  else{
+  const brand=document.querySelector('.brand');if(brand)brand.innerHTML='U.A.R.V.I.S.'+who;
+  if(section==='inicio'){
+    $('#nav').innerHTML='';
+    let mob=$('#mobile-nav');if(mob)mob.remove();
+  }else{
     const sec=SECTIONS.find(s=>s.key===section)||SECTIONS[0];
     const tabs=sec.tabs.map(([k,v])=>`<button class="${k===tab?'on':''}" ${k===tab?'aria-current="page"':''} data-focus-id="nav-${k}" onclick="go('${k}')">${v}</button>`).join('');
     $('#nav').innerHTML=`<button class="back" aria-label="Volver al inicio" data-focus-id="nav-back" onclick="go('inicio')">← Inicio</button><span class="crumb">${sec.label}</span><span class="subtabs" data-scroll-id="subtabs">${tabs}</span>`;
+    let mob=$('#mobile-nav');
+    if(!mob){mob=document.createElement('div');mob.id='mobile-nav';document.body.appendChild(mob)}
+    mob.innerHTML=mobileNavHtml();
   }
   const views={inicio:viewInicio,hoy:viewHoy,semana:viewSemana,ramos:viewRamos,syllabus:viewSyllabus,notas:viewNotas,salud:viewSalud,datos:viewDatos,
     checkin:viewCheckin,bienestar:viewBienestar,respiracion:viewRespiracion,pausas:viewPausas,apoyo:viewApoyo,
     amigos:viewAmigos,perfil:viewPerfil,tema:viewTema,privacidad:viewPrivacidad,ejemplos:viewDatosEjemplo};
-  app.innerHTML=(views[tab]||viewInicio)();
+  const sec=SECTIONS.find(s=>s.key===section);
+  let chips='';
+  if(sec&&sec.tabs.length&&section!=='inicio'){
+    chips=`<div class="subchips-wrap"><div class="subchips" data-scroll-id="subchips">${sec.tabs.map(([k,v])=>`<button class="subchip ${k===tab?'on':''}" ${k===tab?'aria-current="page"':''} onclick="go('${k}')">${v}</button>`).join('')}</div><span class="subchips-hint" aria-hidden="true"></span></div>`;
+  }
+  app.innerHTML=chips+(views[tab]||viewInicio)();
   finish();
 }
 let lastPlanDay=today();

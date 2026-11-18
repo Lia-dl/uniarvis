@@ -1,4 +1,4 @@
-/* Entrenador Académico · Planificador de micro-tareas y detección de semanas críticas */
+/* U.A.R.V.I.S. · Planificador de micro-tareas y detección de semanas críticas */
 /* ===================== Planificador predictivo ===================== */
 const BASE={evaluacion:360,entrega:240,control:90,otro:60};
 const STAGES={

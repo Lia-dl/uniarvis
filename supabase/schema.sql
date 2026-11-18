@@ -1,4 +1,4 @@
--- Entrenador Académico · Esquema opcional para la función "Amigos"
+-- U.A.R.V.I.S. · Esquema opcional para la función "Amigos"
 -- Ejecutar este archivo en Supabase → SQL Editor → New query.
 -- La anon key es pública: la seguridad la dan las políticas RLS de abajo.
 -- Los datos de bienestar (check-in, energía, ánimo, sueño, diario, notas, calificaciones)

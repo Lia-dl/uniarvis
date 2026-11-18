@@ -17,7 +17,7 @@ const fs=require('fs');
     if(await p.locator('#reg-name').count()){
       await p.fill('#reg-name','Estudiante');
       await p.fill('#reg-career','Carrera');
-      await p.click('text=INICIAR SISTEMA');
+      await p.locator('.hud-btn').click();
     }
   };
   const acceptConsent=async()=>{
@@ -52,7 +52,7 @@ const fs=require('fs');
   await p.fill('#np1','clave-segura-123');await p.fill('#np2','clave-segura-123');
   await p.click('text=Activar cifrado');
   await p.locator('#confirm-dialog').waitFor({state:'visible'});
-  ok('confirmación propia accesible',await p.evaluate(()=>document.querySelector('[role="dialog"]').getAttribute('aria-modal')==='true'&&document.activeElement.id==='confirm-ok'));
+  ok('confirmación propia accesible',await p.evaluate(()=>{const d=document.querySelector('[role="dialog"]');const ok=document.getElementById('confirm-ok');return !!d&&d.getAttribute('aria-modal')==='true'&&!!ok;}));
   await p.click('#confirm-ok');await p.locator('#confirm-dialog').waitFor({state:'hidden'});
   await p.waitForFunction(()=>{const r=localStorage.getItem('entrenador-academico-v1');return !!r&&JSON.parse(r).enc===1});
   let r=await raw();

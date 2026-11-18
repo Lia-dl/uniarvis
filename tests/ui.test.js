@@ -15,7 +15,7 @@ const fs=require('fs');
     if(await p.locator('#reg-name').count()){
       await p.fill('#reg-name','Estudiante');
       await p.fill('#reg-career','Carrera');
-      await p.click('text=INICIAR SISTEMA');
+      await p.locator('.hud-btn').click();
     }
   };
   const acceptConsent=async()=>{
@@ -25,7 +25,14 @@ const fs=require('fs');
   const open=async(sec,sub)=>{
     await p.locator('.brand').click();
     if(sec!=='Inicio')await p.locator('.home-card').filter({hasText:sec}).click();
-    if(sub)await p.click('nav >> text="'+sub+'"');
+    if(sub){
+      const chip=p.locator('.subchips').locator('button',{hasText:sub}).first();
+      const navBtn=p.locator('nav .subtabs').locator('button',{hasText:sub}).first();
+      if(await chip.count()){
+        try{ if(await chip.isVisible()) { await chip.click(); return; } }catch(e){}
+      }
+      await navBtn.click();
+    }
   };
   const confirmOk=async(word)=>{
     const d=p.locator('#confirm-dialog');await d.waitFor({state:'visible'});
@@ -36,7 +43,9 @@ const fs=require('fs');
 
   // 1. Primera pantalla: registro de perfil y consentimiento explícito
   let t=await p.textContent('#app');
-  ok('primera vez muestra el inicio de perfil',t.includes('Inicializa tu perfil'));
+  ok('primera vez muestra el inicio de perfil',t.includes('Bienvenido/a')||t.includes('Inicializa tu perfil'));
+  const st0=await p.evaluate(()=>({style:S.settings.style,attr:document.documentElement.getAttribute('data-style')}));
+  ok('estilo Calma predeterminado para perfiles nuevos',st0.style==='calma'&&st0.attr==='calma',JSON.stringify(st0));
   await onboard();
   t=await p.textContent('#app');
   ok('tras el perfil aparece el consentimiento',t.includes('Antes de empezar'));
@@ -46,7 +55,8 @@ const fs=require('fs');
 
   // 1b. Panel de apariencia: color y modo claro/oscuro
   await open('Ajustes','Apariencia');
-  ok('el panel ofrece 8 colores y 2 modos',await p.locator('.swatch').count()===8&&await p.locator('.mode-btn').count()===2);
+  ok('el panel ofrece estilos, 8 colores y 2 modos',await p.locator('.swatch').count()===8&&await p.locator('.mode-btn').count()===4);
+  ok('el estilo HUD sigue disponible',(await p.textContent('#app')).includes('HUD'));
   await p.locator('.swatch').filter({hasText:'Morado'}).click();
   await p.locator('.mode-btn').filter({hasText:'Claro'}).click();
   const th=await p.evaluate(()=>({accent:document.documentElement.getAttribute('data-accent'),mode:document.documentElement.getAttribute('data-mode'),theme:S.settings.theme,modeS:S.settings.mode}));
@@ -225,11 +235,12 @@ const fs=require('fs');
     classes:[],events:[],tasks:[],sessions:[],reviews:[{id:'r',courseId:'c1',cat:'cuello',src:'Docente',text:'texto libre',votes:1}],
     settings:{min:90,max:240},lastPlan:null,wellbeing:{diary:[{date:'2026-10-27',mood:2,tags:['Estrés'],note:'hola',ts:1}],practices:[]}}))});
   await p.reload();
-  const mg=await p.evaluate(()=>({reviews:('reviews' in S),consent:S.consent,courses:S.courses.length,min:S.settings.min,mode:S.settings.mode,attr:document.documentElement.getAttribute('data-mode')}));
+  const mg=await p.evaluate(()=>({reviews:('reviews' in S),consent:S.consent,courses:S.courses.length,min:S.settings.min,mode:S.settings.mode,attr:document.documentElement.getAttribute('data-mode'),style:S.settings.style,styleAttr:document.documentElement.getAttribute('data-style')}));
   ok('migración conserva ramos y mínimo',mg.courses===1&&mg.min===90,JSON.stringify(mg));
   ok('migración elimina reseñas de texto libre antiguas',!mg.reviews);
   ok('migración pide consentimiento de nuevo',mg.consent===null);
   ok('migración usa modo claro',mg.mode==='light'&&mg.attr==='light',JSON.stringify(mg));
+  ok('migración conserva estilo HUD para perfiles existentes',mg.style==='hud'&&mg.styleAttr==='hud',JSON.stringify(mg));
 
   // 13. Todas las pestañas renderizan sin errores
   await p.evaluate(()=>{S=fresh();save()});await p.reload();
@@ -239,7 +250,7 @@ const fs=require('fs');
   await onboard();
   const screens=[['inicio','Inicio'],['hoy','Planificación','Hoy'],['semana','Planificación','Semana'],
     ['ramos','Académico','Mis ramos y horario'],['syllabus','Académico','Syllabus y fechas'],['notas','Académico','Notas y ponderaciones'],
-    ['salud','Académico','Mapa de calor'],['datos','Académico','Datos de ramos'],
+    ['salud','Académico','Carga por semana'],['datos','Académico','Datos de ramos'],
     ['checkin','Bienestar','Check-in'],['respiracion','Bienestar','Respiración y meditaciones'],['pausas','Bienestar','Pausas rápidas'],['apoyo','Bienestar','Apoyo'],
     ['amigos','Social'],['perfil','Ajustes','Perfil'],['tema','Ajustes','Apariencia'],['privacidad','Ajustes','Privacidad'],['ejemplos','Ajustes','Datos de ejemplo']];
   for(const [k,sec,sub] of screens){
@@ -253,6 +264,8 @@ const fs=require('fs');
   await p.setViewportSize({width:390,height:800});await open('Planificación','Hoy');
   const sw=await p.evaluate(()=>document.documentElement.scrollWidth);
   ok('sin scroll horizontal en móvil (390px)',sw<=392,'ancho '+sw);
+  ok('móvil muestra barra de navegación inferior',await p.locator('#mobile-nav .mobile-nav, .mobile-nav').first().isVisible());
+  ok('móvil muestra subpestañas como chips',await p.locator('.subchips').isVisible());
   await p.screenshot({path:shots+'/mobile-hoy.png',fullPage:false});
   await open('Planificación','Semana');
   ok('Semana móvil usa agenda vertical',await p.locator('.agenda-movil').isVisible()&&!await p.locator('.calwrap').isVisible());

@@ -1,7 +1,7 @@
-{
-  "name": "entrenador-academico",
+﻿{
+  "name": "uarvis",
   "version": "1.0.0",
-  "description": "Organización académica que se adapta a tu energía: check-in diario, plan adaptativo, límite diario y apoyo.",
+  "description": "U.A.R.V.I.S.: organización académica que se adapta a tu energía, con plan adaptativo, límite diario y apoyo.",
   "private": true,
   "license": "MIT",
   "scripts": {

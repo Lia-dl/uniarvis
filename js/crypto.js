@@ -1,4 +1,4 @@
-/* Entrenador Académico · Cifrado opcional de los datos con contraseña (WebCrypto: PBKDF2 + AES-GCM-256).
+/* U.A.R.V.I.S. · Cifrado opcional de los datos con contraseña (WebCrypto: PBKDF2 + AES-GCM-256).
    La contraseña nunca se guarda: solo vive en memoria la clave derivada (no exportable). */
 const CRYPTO_OK=!!(window.crypto&&crypto.subtle&&window.isSecureContext!==false);
 const PBKDF2_IT=250000;

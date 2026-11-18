@@ -1,4 +1,4 @@
-/* Entrenador Académico · Utilidades: fechas, formato, helpers */
+﻿/* U.A.R.V.I.S. · Utilidades: fechas, formato, helpers */
 /* ===================== Utilidades ===================== */
 const $=s=>document.querySelector(s);
 const pad=n=>String(n).padStart(2,'0');
@@ -10,7 +10,7 @@ const today=()=>fmt(new Date());
 const mondayOf=s=>addDays(s,-((parse(s).getDay()+6)%7));
 const uid=()=>Math.random().toString(36).slice(2,9);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const norm=s=>s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+const norm=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 const toMin=t=>{const [h,m]=t.split(':').map(Number);return h*60+m};
 const dshort=s=>{const d=parse(s);return `${pad(d.getDate())}/${pad(d.getMonth()+1)}`};
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
@@ -20,13 +20,16 @@ const COLORS=['#3b6df0','#e0693a','#2e9e6a','#a855c7','#d6a21f','#16a0b8','#d650
 const TYPE_LABEL={evaluacion:'Evaluación',entrega:'Entrega',control:'Control',otro:'Otro'};
 const THEMES=[['cian','Cian','#00e5ff'],['rosa','Rosa claro','#ff8fc7'],['celeste','Celeste','#38bdf8'],['azul','Azul','#2563eb'],['verde','Verde','#22c55e'],['naranjo','Naranjo','#f97316'],['morado','Morado','#a855f7'],['amarillo','Amarillo','#eab308']];
 const MODES=[['dark','Oscuro'],['light','Claro']];
+const STYLES=[['calma','Calma'],['hud','HUD']];
 const themeOk=id=>THEMES.some(t=>t[0]===id);
 const modeOk=id=>MODES.some(m=>m[0]===id);
+const styleOk=id=>STYLES.some(s=>s[0]===id);
 function applyTheme(){
   const st=(S&&S.settings)||{};
   const el=document.documentElement;
   el.setAttribute('data-accent',themeOk(st.theme)?st.theme:'cian');
   el.setAttribute('data-mode',modeOk(st.mode)?st.mode:'light');
+  el.setAttribute('data-style',styleOk(st.style)?st.style:'calma');
   const meta=document.querySelector('meta[name="theme-color"]');
   if(meta)meta.content=st.mode==='light'?'#f4f7fb':'#050b14';
 }

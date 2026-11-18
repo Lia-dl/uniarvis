@@ -1,4 +1,4 @@
-/* Entrenador Académico · Acciones del usuario, datos anónimos de ramos, privacidad y datos de ejemplo */
+/* U.A.R.V.I.S. · Acciones del usuario, datos anónimos de ramos, privacidad y datos de ejemplo */
 /* ===================== Acciones ===================== */
 function undoable(msg,mutate,after){
   const snap=JSON.stringify(S);
@@ -259,7 +259,7 @@ function icsFold(line){const cs=Array.from(line),out=[];while(cs.length>60)out.p
 const icsEsc=s=>String(s).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n');
 function buildICS(){
   const stamp=new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+Z$/,'Z'),dt=d=>d.replace(/-/g,'');
-  const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Entrenador Academico//ES','CALSCALE:GREGORIAN'];
+  const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//U.A.R.V.I.S.//ES','CALSCALE:GREGORIAN'];
   S.events.forEach(e=>L.push('BEGIN:VEVENT',`UID:${e.id}@entrenador-academico`,`DTSTAMP:${stamp}`,
     `DTSTART;VALUE=DATE:${dt(e.date)}`,`DTEND;VALUE=DATE:${dt(addDays(e.date,1))}`,
     icsFold('SUMMARY:'+icsEsc(`${TYPE_LABEL[e.type]} · ${cname(e.courseId)} · ${e.title}`)),'END:VEVENT'));
@@ -292,7 +292,7 @@ async function loadDemo(){
   [[0,-6,'Certamen 1','evaluacion'],[1,-5,'Control 1','control'],[2,-3,'Entrega 1','entrega'],[3,-12,'Control 1','control'],
    [0,-20,'Certamen 0','evaluacion'],[1,-19,'Informe previo','entrega'],[2,-18,'Control 1','control'],[3,-25,'Control 0','control']]
     .forEach(([ci_,off,ti,ty])=>S.events.push({id:uid(),courseId:cs[ci_].id,title:ti,date:addDays(mon,off),type:ty}));
-  const factor=[0.9,0.35,1,1.1];                   // Termodinámica con poca atención, para ver el mapa de calor
+  const factor=[0.9,0.35,1,1.1];                   // Termodinámica con poca atención, para ver la carga por semana
   for(let k=1;k<=20;k++)cs.forEach((c,i)=>{
     if(Math.random()<0.7)S.sessions.push({id:uid(),date:addDays(t,-k),courseId:c.id,minutes:Math.round((20+Math.random()*50)*factor[i])});
   });
@@ -309,4 +309,8 @@ async function loadDemo(){
   [[3,3,'mixto',6],[3,3,'entregas',7],[4,3,'mixto',6]].forEach(a=>R('Estadística',...a));
   [[2,2,'controles',4],[2,2,'controles',3],[3,2,'mixto',4]].forEach(a=>R('Economía',...a));
   loadDraft();replanAll();toast('Datos de ejemplo cargados. Activé el check-in solo para el ejemplo; puedes revocarlo en Ajustes → Privacidad.');render();
+}
+function setStyle(id){
+  if(!styleOk(id))return;
+  S.settings.style=id;save();render();
 }

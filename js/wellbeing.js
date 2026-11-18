@@ -1,4 +1,4 @@
-/* Entrenador Académico · Check-in, alertas tempranas, pausas, respiración, meditación y patrones */
+/* U.A.R.V.I.S. · Check-in, alertas tempranas, pausas, respiración, meditación y patrones */
 /* ===================== Check-in diario ===================== */
 const ENERGY=[['▁','Muy baja'],['▃','Baja'],['▅','Media'],['▆','Buena'],['█','Alta']];
 const MOODS=[['😞','Muy mal'],['🙁','Mal'],['😐','Normal'],['🙂','Bien'],['😄','Muy bien']];

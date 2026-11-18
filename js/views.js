@@ -1,10 +1,21 @@
-/* Entrenador Académico · Vistas (HTML de cada pestaña) */
+/* U.A.R.V.I.S. · Vistas (HTML de cada pestaña) */
 /* ===================== Vistas ===================== */
 function viewLanding(){
+  const calma=(S.settings&&S.settings.style)==='calma';
+  if(calma)return `<div class="landing landing-calma"><div class="landing-bg"></div><div class="landing-panel">
+    <h1 class="landing-title">Bienvenido/a</h1>
+    <p class="landing-sub">Crea tu perfil para organizar tu semestre a tu ritmo.</p>
+    <div class="hud-form">
+      <label>Nombre<input id="reg-name" type="text" maxlength="60" placeholder="Tu nombre"></label>
+      <label>Carrera / Programa<input id="reg-career" type="text" maxlength="80" placeholder="Tu carrera"></label>
+      <button class="btn hud-btn" onclick="registerProfile()">Empezar</button>
+    </div>
+    <p class="mute hud-note">Los datos se guardan solo en este navegador (localStorage).</p>
+  </div></div>`;
   return `<div class="landing"><div class="landing-bg"></div><div class="landing-panel hud">
-    <div class="hud-head"><span class="hud-mark">◈</span> SISTEMA A.R.V.I.S. · INTERFAZ ACADÉMICA</div>
-    <h1 class="landing-title">Entrenador Académico</h1>
-    <p class="landing-sub">Inicializa tu perfil para personalizar el panel HUD de tu semestre.</p>
+    <div class="hud-head"><span class="hud-mark">◈</span> U.A.R.V.I.S. · INTERFAZ ACADÉMICA</div>
+    <h1 class="landing-title">U.A.R.V.I.S.</h1>
+    <p class="landing-sub">Ingresa tu perfil para personalizar el panel HUD de tu semestre.</p>
     <div class="hud-form">
       <label>Identificación / Nombre<input id="reg-name" type="text" maxlength="60" placeholder="Tu nombre"></label>
       <label>Carrera / Programa<input id="reg-career" type="text" maxlength="80" placeholder="Tu carrera"></label>
@@ -24,8 +35,9 @@ function homeNotice(){
 function viewInicio(){
   const name=S.profile&&S.profile.name?esc(S.profile.name):'';
   const descs={planificacion:'Tu día y tu semana, sin sobrecargas.',academico:'Ramos, fechas, notas y datos.',bienestar:'Check-in, pausas y apoyo.',social:'Coordina sesiones con amigos.',ajustes:'Perfil, tema y privacidad.'};
+  const icons=(typeof HOME_ICONS!=='undefined')?HOME_ICONS:[];
   const cards=SECTIONS.filter(s=>s.key!=='inicio').map((s,i)=>`<button class="home-card" onclick="go('${s.tabs[0][0]}')">
-    <span class="home-icon">${String(i+1).padStart(2,'0')}</span>
+    <span class="home-icon">${icons[i]||''}</span>
     <span class="home-copy"><b>${s.label}</b><span>${descs[s.key]||''}</span></span>
     <span class="home-arrow" aria-hidden="true">→</span></button>`).join('');
   return `
@@ -180,7 +192,7 @@ function viewSemana(){
     `<div class="chip" style="border-color:${ccolor(e.courseId)}" title="${esc(e.title)}"><b>${TYPE_LABEL[e.type]}</b> ${esc(cname(e.courseId))}<br>${esc(e.title)}</div>`).join('')}</div>`).join('');
   h+='<div class="lbl">Plan</div>'+days.map(d=>`<div>${S.tasks.filter(t=>t.date===d).map(t=>
     `<div class="chip ${t.done?'done':''}" style="border-color:${ccolor(t.courseId)}">${t.minutes}' ${esc(cname(t.courseId))}</div>`).join('')}<div class="mute">${dayLoad(d)||capFor(d)?dayLoad(d)+' / '+capFor(d)+' min':''}</div></div>`).join('');
-  h+=`<div class="lbl" style="padding:0;position:relative;height:${(H1-H0)*HH}px">${[...Array(H1-H0)].map((_,i)=>`<div style="position:absolute;top:${i*HH}px;font-size:10px;padding-left:4px">${pad(H0+i)}:00</div>`).join('')}</div>`;
+  h+=`<div class="lbl" style="padding:0;position:relative;height:${(H1-H0)*HH}px">${[...Array(H1-H0)].map((_,i)=>`<div style="position:absolute;top:${i*HH}px;font-size:12px;padding-left:4px">${pad(H0+i)}:00</div>`).join('')}</div>`;
   h+=days.map((d,i)=>`<div class="col ${d===t0?'today':''}" style="height:${(H1-H0)*HH}px">${S.classes.filter(k=>k.day===i).map(k=>{
     const top=(toMin(k.start)-H0*60)/60*HH,ht=(toMin(k.end)-toMin(k.start))/60*HH;
     return `<div class="blk" style="top:${top}px;height:${ht}px;background:${ccolor(k.courseId)}">${esc(cname(k.courseId))}<br>${k.start}–${k.end}</div>`}).join('')}${socialWeekBlocks(d,i)}</div>`).join('');
@@ -381,7 +393,7 @@ function viewPrivacidad(){
   </div>`;
 }
 function viewSalud(){
-  if(!S.courses.length)return '<div class="card empty">Agrega ramos para ver tu mapa de calor.</div>';
+  if(!S.courses.length)return '<div class="card empty">Agrega ramos para ver tu carga por semana.</div>';
   const t0=today(),N=14,sumD=S.courses.reduce((a,c)=>a+c.difficulty,0);
   const dates=[...Array(N)].map((_,i)=>addDays(t0,i-N+1));
   const rows=S.courses.map(c=>{
@@ -399,7 +411,7 @@ function viewSalud(){
   const cls=v=>v===0?'h0':v<0.5?'h1':v<0.9?'h2':v<=1.3?'h3':'h4';
   const alerts=rows.filter(r=>r.risk);
   return `
-  <div class="card"><h2>Mapa de calor de salud académica</h2>
+  <div class="card"><h2>Carga por semana</h2>
     ${alerts.length?alerts.map(r=>`<div class="banner go"><b>${esc(r.c.name)}</b>: tienes "${esc(r.nextEv.title)}" en ${r.days2} día(s) y esta semana le diste poca atención (${Math.round(r.a7*100)}% de lo recomendado). Quizá convenga reequilibrar un poco.</div>`).join('')
       :'<div class="banner min">Sin desequilibrios importantes frente a tus próximas evaluaciones.</div>'}
     <div class="legend mute">Atención vs. cuota recomendada del ramo (según dificultad y tu capacidad de cada día):
@@ -445,10 +457,15 @@ function viewDatos(){
 function viewTema(){
   const th=themeOk(S.settings&&S.settings.theme)?S.settings.theme:'cian';
   const md=modeOk(S.settings&&S.settings.mode)?S.settings.mode:'light';
+  const st=styleOk(S.settings&&S.settings.style)?S.settings.style:'calma';
+  const sdescs={calma:'Sin brillo ni mayúsculas forzadas, con textos cálidos.',hud:'Interfaz futurista con brillo y estilo tecnológico.'};
   return `
   <div class="card"><h2>Apariencia</h2>
-    <p style="margin-top:0">Escoge el color de la aplicación y el modo de luz. La elección se guarda solo en este navegador.</p>
-    <h3>Color de la aplicación</h3>
+    <p style="margin-top:0">Escoge el estilo visual, el color y el modo de luz. La elección se guarda solo en este navegador.</p>
+    <h3>Estilo visual</h3>
+    <div class="modes">${STYLES.map(([k,label])=>`<button type="button" class="mode-btn ${k===st?'on':''}" aria-pressed="${k===st}" onclick="setStyle('${k}')"><span>${label}</span></button>`).join('')}</div>
+    <p class="mute" style="margin-bottom:0">${sdescs[st]||''}</p>
+    <h3 style="margin-top:20px">Color de la aplicación</h3>
     <div class="swatches">${THEMES.map(([k,label,hex])=>`<button type="button" class="swatch ${k===th?'on':''}" style="--sw:${hex}" aria-pressed="${k===th}" onclick="setTheme('${k}')"><span class="swatch-dot"></span><span>${label}</span></button>`).join('')}</div>
     <h3 style="margin-top:20px">Modo</h3>
     <div class="modes">${MODES.map(([k,label])=>`<button type="button" class="mode-btn ${k===md?'on':''}" aria-pressed="${k===md}" onclick="setMode('${k}')"><span class="mode-preview ${k}"></span><span>${label}</span></button>`).join('')}</div>
@@ -456,7 +473,7 @@ function viewTema(){
   </div>
   <div class="card"><h3>Vista previa</h3>
     <div class="preview">
-      <div class="preview-head"><span aria-hidden="true" class="dot" style="background:var(--accent)"></span><b>Entrenador Académico</b></div>
+      <div class="preview-head"><span aria-hidden="true" class="dot" style="background:var(--accent)"></span><b>U.A.R.V.I.S.</b></div>
       <div class="preview-body">
         <div class="row"><span class="tag">Etiqueta</span><span class="tag sel on" style="cursor:default">Seleccionado</span></div>
         <div class="row" style="margin-top:12px"><button class="btn" style="cursor:default">Botón principal</button><button class="btn sec" style="cursor:default">Secundario</button></div>

@@ -16,7 +16,7 @@ const fs=require('fs');
     if(await p.locator('#reg-name').count()){
       await p.fill('#reg-name','Estudiante');
       await p.fill('#reg-career','Carrera');
-      await p.click('text=INICIAR SISTEMA');
+      await p.locator('.hud-btn').click();
     }
   };
   const acceptConsent=async()=>{

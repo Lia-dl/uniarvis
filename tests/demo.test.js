@@ -35,7 +35,7 @@ const fs=require('fs');
   await p.goto(base);
   if(await p.locator('#reg-name').count()){
     await p.fill('#reg-name','Estudiante');await p.fill('#reg-career','Carrera');
-    await p.click('text=INICIAR SISTEMA');
+    await p.locator('.hud-btn').click();
   }
   await p.evaluate(()=>{
     S=fresh();S.profile={name:'Estudiante',career:'Carrera',onboarded:true};

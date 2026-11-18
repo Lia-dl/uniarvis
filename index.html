@@ -1,19 +1,20 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Entrenador Académico</title>
+<title>U.A.R.V.I.S.</title>
 <meta name="theme-color" content="#f4f7fb">
-<meta name="description" content="Organiza tu semestre según tu energía real: plan adaptativo, límite diario y apoyo.">
+<meta name="description" content="U.A.R.V.I.S. organiza tu semestre según tu energía real: plan adaptativo, límite diario y apoyo.">
 <link rel="manifest" href="manifest.webmanifest">
 <script>
 try{
   var s=JSON.parse(localStorage.getItem('entrenador-academico-v1')||'{}');
-  var c=s&&s.settings&&s.settings.theme,m=s&&s.settings&&s.settings.mode;
+  var c=s&&s.settings&&s.settings.theme,m=s&&s.settings&&s.settings.mode,st=s&&s.settings&&s.settings.style;
   document.documentElement.setAttribute('data-accent',/^(cian|rosa|celeste|azul|verde|naranjo|morado|amarillo)$/.test(c)?c:'cian');
   document.documentElement.setAttribute('data-mode',m==='dark'?'dark':'light');
-}catch(e){}
+  document.documentElement.setAttribute('data-style',/^(calma|hud)$/.test(st)?st:(s&&s.courses?'hud':'calma'));
+}catch(e){document.documentElement.setAttribute('data-style','calma')}
 </script>
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -21,7 +22,7 @@ try{
 </head>
 <body>
 <a class="skip" href="#app">Saltar al contenido</a>
-<header><div class="hwrap"><span class="brand" role="button" tabindex="0" aria-label="Ir al inicio" onclick="go('inicio')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();go('inicio')}">Entrenador Académico</span><nav id="nav" aria-label="Navegación de secciones"></nav></div></header>
+<header><div class="hwrap"><span class="brand" role="button" tabindex="0" aria-label="Ir al inicio" onclick="go('inicio')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();go('inicio')}">U.A.R.V.I.S.</span><nav id="nav" aria-label="Navegación de secciones"></nav></div></header>
 <main id="app" tabindex="-1" aria-label="Contenido principal"></main>
 <footer>Esta app es una guía de organización y autocuidado; no reemplaza a un profesional de la salud. ¿Necesitas hablar con alguien? <button class="lnk" onclick="go('apoyo')">Ver opciones de apoyo</button></footer>
 <div id="toast" role="status" aria-live="polite"></div>
