@@ -1,8 +1,19 @@
 /* Entrenador Académico · Acciones del usuario, datos anónimos de ramos, privacidad y datos de ejemplo */
 /* ===================== Acciones ===================== */
-function go(t){stopBreath(true);stopMed(true);tab=t;render();try{window.scrollTo(0,0)}catch(e){}}
-function goBreath(k){stopBreath(true);stopMed(true);bsel=k;tab='bienestar';render();startBreath()}
-function goMed(id){stopBreath(true);stopMed(true);tab='bienestar';render();startMed(id)}
+function go(t,fromRoute){
+  stopBreath(true);stopMed(true);
+  const r=typeof routeFor==='function'?routeFor(t):{section:'inicio',tab:'inicio'};
+  section=r.section;tab=r.tab;
+  if(!fromRoute&&typeof hashFor==='function'){
+    const h=hashFor(r);
+    try{if(h&&location.hash!==h)history.pushState(null,'',h)}catch(e){}
+  }
+  render();
+  if(tab==='amigos'&&typeof socialOpenTab==='function')socialOpenTab();
+  try{window.scrollTo(0,0)}catch(e){}
+}
+function goBreath(k){stopBreath(true);stopMed(true);bsel=k;go('respiracion');startBreath()}
+function goMed(id){stopBreath(true);stopMed(true);go('respiracion');startMed(id)}
 function toggleTask(id){
   const t=S.tasks.find(x=>x.id===id);if(!t)return;
   if(!t.done){
@@ -41,12 +52,20 @@ function setMode(id){
   if(!modeOk(id))return;
   S.settings.mode=id;save();render();
 }
+function setShare(id,on){const c=course(id);if(!c)return;c.share=!!on;save();render()}
 function registerProfile(){
   const n=($('#reg-name')||{}).value||'',c=($('#reg-career')||{}).value||'';
   const name=String(n).trim(),career=String(c).trim();
   if(!name||!career)return toast('Ingresa tu nombre y carrera.');
   S.profile={name:name.slice(0,60),career:career.slice(0,80),onboarded:true};
   save();toast(`Bienvenido/a, ${S.profile.name}.`);render();
+}
+function saveProfile(){
+  const n=($('#pf-name')||{}).value||'',c=($('#pf-career')||{}).value||'';
+  const name=String(n).trim(),career=String(c).trim();
+  if(!name||!career)return toast('Ingresa tu nombre y carrera.');
+  S.profile={name:name.slice(0,60),career:career.slice(0,80),onboarded:true};
+  save();toast('Perfil actualizado.');render();
 }
 function addCourse(){
   const n=$('#cn').value.trim();if(!n)return;
@@ -165,15 +184,19 @@ function validState(j){
   for(const k of ['courses','classes','events','tasks','sessions'])if(!Array.isArray(j[k]))return 'falta '+k;
   for(const c of j.courses){
     if(!(c&&RX.id.test(c.id)&&str(c.name,120)&&int(c.difficulty,1,5)&&RX.color.test(c.color)))return 'ramos';
+    if(c.share!==undefined&&typeof c.share!=='boolean')return 'ramos';
     if(c.grades!==undefined){
       if(!Array.isArray(c.grades))return 'notas';
       for(const g of c.grades)if(!(g&&RX.id.test(g.id)&&str(g.name,80)&&num(g.score,-100,100)&&num(g.weight,0,100)))return 'notas';
     }
   }
   for(const k of j.classes)if(!(k&&RX.id.test(k.id)&&RX.id.test(k.courseId)&&int(k.day,0,6)&&RX.time.test(k.start)&&RX.time.test(k.end)))return 'horario';
-  for(const e of j.events)if(!(e&&RX.id.test(e.id)&&RX.id.test(e.courseId)&&str(e.title,200)&&RX.date.test(e.date)&&Object.prototype.hasOwnProperty.call(TYPE_LABEL,e.type)))return 'fechas';
+  for(const e of j.events){
+    if(!(e&&RX.id.test(e.id)&&RX.id.test(e.courseId)&&str(e.title,200)&&RX.date.test(e.date)&&Object.prototype.hasOwnProperty.call(TYPE_LABEL,e.type)))return 'fechas';
+    if(e.src!==undefined&&!(e.src&&typeof e.src==='object'&&!Array.isArray(e.src)&&RX.id.test(e.src.owner)&&RX.id.test(e.src.id)))return 'fechas';
+  }
   for(const t of j.tasks)if(!(t&&RX.id.test(t.id)&&RX.id.test(t.eventId)&&RX.id.test(t.courseId)&&str(t.title,300)&&RX.date.test(t.date)&&num(t.minutes,1,600)&&typeof t.done==='boolean'))return 'tareas';
-  for(const s of j.sessions)if(!(s&&RX.id.test(s.id)&&RX.id.test(s.courseId)&&RX.date.test(s.date)&&num(s.minutes,1,1440)&&(s.taskId===undefined||RX.id.test(s.taskId))))return 'sesiones';
+  for(const s of j.sessions)if(!(s&&RX.id.test(s.id)&&RX.id.test(s.courseId)&&RX.date.test(s.date)&&num(s.minutes,1,1440)&&(s.taskId===undefined||RX.id.test(s.taskId))&&(s.socialId===undefined||RX.id.test(s.socialId))))return 'sesiones';
   if(j.profile!==undefined){
     if(!j.profile||typeof j.profile!=='object'||Array.isArray(j.profile))return 'perfil';
     if(j.profile.name!==undefined&&!str(j.profile.name,60))return 'perfil';
@@ -192,10 +215,12 @@ function validState(j){
 }
 function cleanState(j){
   const c=fresh();
-  ['classes','events','tasks','sessions'].forEach(k=>c[k]=j[k]);
-  c.courses=(j.courses||[]).map(x=>({id:x.id,name:x.name,difficulty:x.difficulty,color:x.color,grades:(x.grades||[]).map(g=>({id:g.id,name:String(g.name||'').slice(0,80),score:+g.score,weight:+g.weight}))}));
+  c.classes=j.classes;c.tasks=j.tasks;
+  c.events=j.events.map(e=>{const o={id:e.id,courseId:e.courseId,title:String(e.title||'').slice(0,200),date:e.date,type:e.type};if(e.early)o.early=true;if(e.src)o.src={owner:String(e.src.owner).slice(0,40),id:String(e.src.id).slice(0,40)};return o});
+  c.sessions=j.sessions.map(s=>{const o={id:s.id,date:s.date,courseId:s.courseId,minutes:+s.minutes};if(s.taskId)o.taskId=s.taskId;if(s.socialId)o.socialId=s.socialId;return o});
+  c.courses=(j.courses||[]).map(x=>({id:x.id,name:x.name,difficulty:x.difficulty,color:x.color,share:x.share===true,grades:(x.grades||[]).map(g=>({id:g.id,name:String(g.name||'').slice(0,80),score:+g.score,weight:+g.weight}))}));
   c.ratings=j.ratings||[];
-  c.settings={min:int15(j.settings&&j.settings.min)?j.settings.min:60,theme:themeOk(j.settings&&j.settings.theme)?j.settings.theme:'cian',mode:modeOk(j.settings&&j.settings.mode)?j.settings.mode:'dark'};
+  c.settings={min:int15(j.settings&&j.settings.min)?j.settings.min:60,theme:themeOk(j.settings&&j.settings.theme)?j.settings.theme:'cian',mode:modeOk(j.settings&&j.settings.mode)?j.settings.mode:'light'};
   c.wellbeing={diary:((j.wellbeing&&j.wellbeing.diary)||[]).map(e=>({date:e.date,mood:e.mood??null,energy:e.energy??null,sleep:e.sleep??null,tags:e.tags||[],note:e.note||'',ts:Number(e.ts)||0}))};
   c.support={name:String((j.support&&j.support.name)||'').slice(0,120),contact:String((j.support&&j.support.contact)||'').slice(0,300)};
   c.consent=j.consent&&typeof j.consent.health==='boolean'?{health:j.consent.health,at:today()}:null;
@@ -275,5 +300,5 @@ function loadDemo(){
   [[4,4,'certamenes',8],[4,5,'certamenes',9],[3,4,'mixto',7],[4,4,'certamenes',8]].forEach(a=>R('Termodinámica',...a));
   [[3,3,'mixto',6],[3,3,'entregas',7],[4,3,'mixto',6]].forEach(a=>R('Estadística',...a));
   [[2,2,'controles',4],[2,2,'controles',3],[3,2,'mixto',4]].forEach(a=>R('Economía',...a));
-  loadDraft();replanAll();toast('Datos de ejemplo cargados. Activé el check-in solo para el ejemplo; puedes revocarlo en Apoyo.');render();
+  loadDraft();replanAll();toast('Datos de ejemplo cargados. Activé el check-in solo para el ejemplo; puedes revocarlo en Ajustes → Privacidad.');render();
 }

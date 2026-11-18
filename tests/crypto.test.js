@@ -24,16 +24,21 @@ const fs=require('fs');
     const b=p.locator('text=Acepto y quiero usar el check-in');
     if(await b.count())await b.click();
   };
+  const open=async(sec,sub)=>{
+    await p.locator('.brand').click();
+    if(sec!=='Inicio')await p.locator('.home-card').filter({hasText:sec}).click();
+    if(sub)await p.click('nav >> text="'+sub+'"');
+  };
   await p.goto(base);
   await onboard();
   await acceptConsent();
-  await p.click('nav >> text="Ramos"');await p.click('text=Cargar datos de ejemplo');
+  await open('Ajustes','Datos de ejemplo');await p.click('text=Cargar datos de ejemplo');
   await onboard();
   const before=await p.evaluate(()=>({c:S.courses.length,d:S.wellbeing.diary.length,s:S.sessions.length}));
   ok('hay un modo de cifrado disponible',await p.evaluate(()=>CRYPTO_OK));
 
   // activar con validaciones
-  await p.click('nav >> text=Apoyo');
+  await open('Ajustes','Privacidad');
   await p.fill('#np1','corta');await p.fill('#np2','corta');await p.click('text=Activar cifrado');
   ok('rechaza contraseñas de menos de 8 caracteres',await p.evaluate(()=>!KEYOBJ));
   await p.fill('#np1','clave-segura-123');await p.fill('#np2','otra-distinta-123');await p.click('text=Activar cifrado');
@@ -59,7 +64,7 @@ const fs=require('fs');
   ok('los cambios persisten tras reabrir',await p.evaluate(()=>S.sessions.some(s=>s.id==='zz1-marcador-plano')));
 
   // respaldo cifrado
-  await p.click('nav >> text=Apoyo');
+  await open('Ajustes','Privacidad');
   const [dl]=await Promise.all([p.waitForEvent('download'),p.click('text=Descargar respaldo (JSON)')]);
   const bk=tmp+'/respaldo-cifrado.json';fs.copyFileSync(await dl.path(),bk);const bt=fs.readFileSync(bk,'utf8');
   ok('con cifrado activo el respaldo sale cifrado',dl.suggestedFilename().includes('cifrado')&&bt.includes('"enc":1')&&!bt.includes('Cálculo'),dl.suggestedFilename());
@@ -72,12 +77,12 @@ const fs=require('fs');
   ok('la contraseña nueva funciona',await p.evaluate(()=>!LOCKED&&S.courses.length===4));
 
   // desactivar → vuelve a texto plano
-  await p.click('nav >> text=Apoyo');await p.click('text=Desactivar cifrado');await p.waitForTimeout(700);
+  await open('Ajustes','Privacidad');await p.click('text=Desactivar cifrado');await p.waitForTimeout(700);
   r=await raw();ok('al desactivar, vuelve a guardarse en claro',!r.includes('"enc"')&&JSON.parse(r).courses.length===4);
   await p.reload();ok('abre sin contraseña tras desactivar',await p.evaluate(()=>!LOCKED&&S.courses.length===4));
 
   // restaurar el respaldo cifrado (con la contraseña antigua)
-  await p.click('nav >> text=Apoyo');
+  await open('Ajustes','Privacidad');
   await p.setInputFiles('input[onchange="importData(this)"]',bk);await p.waitForTimeout(1200);
   ok('restaurar respaldo cifrado pide la contraseña',await p.evaluate(()=>!!LOCKED));
   await unlock('clave-segura-123');
@@ -90,7 +95,7 @@ const fs=require('fs');
   // borrar todo desactiva el cifrado
   await onboard();
   await acceptConsent();
-  await p.click('nav >> text=Apoyo');await p.fill('#np1','clave-segura-123');await p.fill('#np2','clave-segura-123');await p.click('text=Activar cifrado');await p.waitForTimeout(800);
+  await open('Ajustes','Privacidad');await p.fill('#np1','clave-segura-123');await p.fill('#np2','clave-segura-123');await p.click('text=Activar cifrado');await p.waitForTimeout(800);
   await p.click('text=Borrar todo');await p.waitForTimeout(700);r=await raw();
   ok('"Borrar todo" también desactiva el cifrado',!!r&&!r.includes('"enc"')&&await p.evaluate(()=>!KEYOBJ));
 

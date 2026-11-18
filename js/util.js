@@ -26,7 +26,7 @@ function applyTheme(){
   const st=(S&&S.settings)||{};
   const el=document.documentElement;
   el.setAttribute('data-accent',themeOk(st.theme)?st.theme:'cian');
-  el.setAttribute('data-mode',modeOk(st.mode)?st.mode:'dark');
+  el.setAttribute('data-mode',modeOk(st.mode)?st.mode:'light');
   const meta=document.querySelector('meta[name="theme-color"]');
   if(meta)meta.content=st.mode==='light'?'#f4f7fb':'#050b14';
 }

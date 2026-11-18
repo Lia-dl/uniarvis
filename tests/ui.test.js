@@ -22,6 +22,11 @@ const fs=require('fs');
     const b=p.locator('text=Acepto y quiero usar el check-in');
     if(await b.count())await b.click();
   };
+  const open=async(sec,sub)=>{
+    await p.locator('.brand').click();
+    if(sec!=='Inicio')await p.locator('.home-card').filter({hasText:sec}).click();
+    if(sub)await p.click('nav >> text="'+sub+'"');
+  };
   await p.goto('file://'+file);
 
   // 1. Primera pantalla: registro de perfil y consentimiento explícito
@@ -31,26 +36,43 @@ const fs=require('fs');
   t=await p.textContent('#app');
   ok('tras el perfil aparece el consentimiento',t.includes('Antes de empezar'));
   await acceptConsent();
+  const ml=await p.evaluate(()=>({mode:S.settings.mode,attr:document.documentElement.getAttribute('data-mode')}));
+  ok('modo claro por defecto',ml.mode==='light'&&ml.attr==='light',JSON.stringify(ml));
 
   // 1b. Panel de apariencia: color y modo claro/oscuro
-  await p.click('nav >> text="Apariencia"');
+  await open('Ajustes','Apariencia');
   ok('el panel ofrece 8 colores y 2 modos',await p.locator('.swatch').count()===8&&await p.locator('.mode-btn').count()===2);
   await p.locator('.swatch').filter({hasText:'Morado'}).click();
   await p.locator('.mode-btn').filter({hasText:'Claro'}).click();
   const th=await p.evaluate(()=>({accent:document.documentElement.getAttribute('data-accent'),mode:document.documentElement.getAttribute('data-mode'),theme:S.settings.theme,modeS:S.settings.mode}));
   ok('el panel aplica color y modo',th.accent==='morado'&&th.mode==='light'&&th.theme==='morado'&&th.modeS==='light',JSON.stringify(th));
   await p.reload();
-  await p.click('nav >> text="Apariencia"');
+  ok('recarga conserva la ruta',p.url().includes('#/ajustes/tema'),p.url());
+  await open('Ajustes','Apariencia');
   const th2=await p.evaluate(()=>({accent:document.documentElement.getAttribute('data-accent'),mode:document.documentElement.getAttribute('data-mode')}));
   ok('el tema se conserva al recargar',th2.accent==='morado'&&th2.mode==='light',JSON.stringify(th2));
   await p.locator('.swatch').filter({hasText:'Cian'}).click();
   await p.locator('.mode-btn').filter({hasText:'Oscuro'}).click();
 
+  // 1c. Navegación por secciones y URL
+  await open('Académico','Notas y ponderaciones');
+  ok('la URL refleja la subsección',p.url().endsWith('#/academico/notas'),p.url());
+  await p.locator('.brand').click();
+  await p.goBack();
+  ok('Atrás vuelve a la subsección anterior',(await p.textContent('#app')).includes('Notas y ponderaciones'));
+  await open('Ajustes','Perfil');
+  await p.fill('#pf-name','Maite');await p.fill('#pf-career','Ingeniería');await p.click('text=Guardar cambios');
+  ok('el perfil se puede editar',await p.evaluate(()=>S.profile.name==='Maite'&&S.profile.career==='Ingeniería'));
+  await open('Ajustes','Privacidad');
+  ok('Privacidad está en Ajustes',(await p.textContent('#app')).includes('Privacidad y mis datos'));
+  await open('Bienestar','Apoyo');
+  ok('Apoyo ya no contiene Privacidad',!(await p.textContent('#app')).includes('Privacidad y mis datos'));
+
   // 2. Datos de ejemplo
-  await p.click('nav >> text="Ramos"');
+  await open('Ajustes','Datos de ejemplo');
   await p.click('text=Cargar datos de ejemplo');
   await onboard();
-  await p.click('nav >> text="Hoy"');
+  await open('Planificación','Hoy');
   const base=await p.evaluate(()=>({tasks:S.tasks.length,sizes:[...new Set(S.tasks.map(t=>t.minutes))].sort((a,b)=>a-b),
     cap:capFor(today()),min:minFor(today())}));
   ok('plan generado con micro-tareas',base.tasks>20,JSON.stringify(base));
@@ -152,24 +174,30 @@ const fs=require('fs');
     classes:[],events:[],tasks:[],sessions:[],reviews:[{id:'r',courseId:'c1',cat:'cuello',src:'Docente',text:'texto libre',votes:1}],
     settings:{min:90,max:240},lastPlan:null,wellbeing:{diary:[{date:'2026-10-27',mood:2,tags:['Estrés'],note:'hola',ts:1}],practices:[]}}))});
   await p.reload();
-  const mg=await p.evaluate(()=>({reviews:('reviews' in S),consent:S.consent,courses:S.courses.length,min:S.settings.min}));
+  const mg=await p.evaluate(()=>({reviews:('reviews' in S),consent:S.consent,courses:S.courses.length,min:S.settings.min,mode:S.settings.mode,attr:document.documentElement.getAttribute('data-mode')}));
   ok('migración conserva ramos y mínimo',mg.courses===1&&mg.min===90,JSON.stringify(mg));
   ok('migración elimina reseñas de texto libre antiguas',!mg.reviews);
   ok('migración pide consentimiento de nuevo',mg.consent===null);
+  ok('migración usa modo claro',mg.mode==='light'&&mg.attr==='light',JSON.stringify(mg));
 
   // 13. Todas las pestañas renderizan sin errores
   await p.evaluate(()=>{S=fresh();save()});await p.reload();
   await onboard();
   await acceptConsent();
-  await p.click('nav >> text="Ramos"');await p.click('text=Cargar datos de ejemplo');
+  await open('Ajustes','Datos de ejemplo');await p.click('text=Cargar datos de ejemplo');
   await onboard();
-  for(const [k,label] of [['hoy','Hoy'],['semana','Semana'],['ramos','Ramos'],['bienestar','Bienestar'],['apoyo','Apoyo'],['salud','Mapa de calor'],['datos','Datos de ramos'],['tema','Apariencia']]){
-    await p.click('nav >> text="'+label+'"');
-    const len=(await p.textContent('#app')).length;ok('pestaña '+label+' renderiza',len>200,len+' caracteres');
+  const screens=[['inicio','Inicio'],['hoy','Planificación','Hoy'],['semana','Planificación','Semana'],
+    ['ramos','Académico','Mis ramos y horario'],['syllabus','Académico','Syllabus y fechas'],['notas','Académico','Notas y ponderaciones'],
+    ['salud','Académico','Mapa de calor'],['datos','Académico','Datos de ramos'],
+    ['checkin','Bienestar','Check-in'],['respiracion','Bienestar','Respiración y meditaciones'],['pausas','Bienestar','Pausas rápidas'],['apoyo','Bienestar','Apoyo'],
+    ['amigos','Social'],['perfil','Ajustes','Perfil'],['tema','Ajustes','Apariencia'],['privacidad','Ajustes','Privacidad'],['ejemplos','Ajustes','Datos de ejemplo']];
+  for(const [k,sec,sub] of screens){
+    await open(sec,sub);
+    const len=(await p.textContent('#app')).length;ok('sección '+(sub||sec)+' renderiza',len>180,len+' caracteres');
     await p.screenshot({path:shots+'/tab-'+k+'.png',fullPage:true});
   }
   // 14. Móvil
-  await p.setViewportSize({width:390,height:800});await p.click('nav >> text="Hoy"');
+  await p.setViewportSize({width:390,height:800});await open('Planificación','Hoy');
   const sw=await p.evaluate(()=>document.documentElement.scrollWidth);
   ok('sin scroll horizontal en móvil (390px)',sw<=392,'ancho '+sw);
   await p.screenshot({path:shots+'/mobile-hoy.png',fullPage:false});

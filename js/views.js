@@ -13,13 +13,44 @@ function viewLanding(){
     <p class="mute hud-note">Los datos se guardan solo en este navegador (localStorage).</p>
   </div></div>`;
 }
+function homeNotice(){
+  const t0=today();
+  const crit=criticalClusters().filter(g=>diffDays(t0,g.start)<=28)[0];
+  if(crit)return `<div class="banner go"><b>Semana exigente del ${dshort(crit.start)} al ${dshort(crit.end)}</b><br>${crit.events.length} fechas importantes juntas. <button class="lnk" onclick="go('semana')">Ver planificación</button></div>`;
+  const w=earlyWarnings().filter(x=>S.dismissed[x.key]!==t0)[0];
+  if(w)return `<div class="banner soft"><b>${w.title}</b> ${w.text} <button class="lnk" onclick="go('apoyo')">Ver apoyo</button></div>`;
+  return '';
+}
+function viewInicio(){
+  const name=S.profile&&S.profile.name?esc(S.profile.name):'';
+  const descs={planificacion:'Tu día y tu semana, sin sobrecargas.',academico:'Ramos, fechas, notas y datos.',bienestar:'Check-in, pausas y apoyo.',social:'Coordina sesiones con amigos.',ajustes:'Perfil, tema y privacidad.'};
+  const cards=SECTIONS.filter(s=>s.key!=='inicio').map((s,i)=>`<button class="home-card" onclick="go('${s.tabs[0][0]}')">
+    <span class="home-icon">${String(i+1).padStart(2,'0')}</span>
+    <span class="home-copy"><b>${s.label}</b><span>${descs[s.key]||''}</span></span>
+    <span class="home-arrow" aria-hidden="true">→</span></button>`).join('');
+  return `
+  <div class="home-head"><div><h2>Hola, ${name}</h2><p class="mute" style="margin-bottom:0">Elige por dónde empezar hoy.</p></div></div>
+  ${!S.consent?consentCard():''}
+  ${homeNotice()}
+  <div class="home-menu">${cards}</div>`;
+}
+function viewPerfil(){
+  const p=S.profile||{};
+  return `<div class="card"><h2>Perfil</h2>
+    <p class="mute" style="margin-top:0">Tu nombre y tu carrera se guardan solo en este navegador y sirven para personalizar el saludo y el plan.</p>
+    <div class="hud-form" style="max-width:520px">
+      <label>Nombre<input id="pf-name" type="text" maxlength="60" value="${esc(p.name||'')}"></label>
+      <label>Carrera / Programa<input id="pf-career" type="text" maxlength="80" value="${esc(p.career||'')}"></label>
+      <button class="btn" onclick="saveProfile()">Guardar cambios</button>
+    </div></div>`;
+}
 function consentCard(){
   return `<div class="card"><h3>Antes de empezar: tus datos de bienestar</h3>
     <p style="margin-top:0">El check-in y el diario guardan datos sensibles (energía, ánimo, sueño y notas). Así funcionan:</p>
     <ul style="margin:0 0 10px 18px;padding:0">
-      <li>Se guardan <b>solo en este navegador</b>. No se envían a ningún servidor ni cuenta, y no están cifrados: si compartes este equipo, quizá no convenga usarlo.</li>
+      <li>Se guardan <b>solo en este navegador</b>. Aunque actives Amigos, estos datos nunca se envían al servidor ni están cifrados: si compartes este equipo, quizá no convenga usarlo.</li>
       <li>Los usa la propia app para ajustar tu plan y mostrarte patrones. No hay diagnósticos, puntajes ni rachas.</li>
-      <li>Puedes exportarlos, revocar el permiso o borrarlos cuando quieras (en <i>Apoyo → Privacidad</i>).</li>
+      <li>Puedes exportarlos, revocar el permiso o borrarlos cuando quieras (en <i>Ajustes → Privacidad</i>).</li>
     </ul>
     <div class="row"><button class="btn" onclick="setConsent(true)">Acepto y quiero usar el check-in</button>
     <button class="btn sec" onclick="setConsent(false)">Ahora no</button></div>
@@ -81,11 +112,12 @@ function viewHoy(){
   });
   const opts=S.courses.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
   return `
-  ${!S.courses.length?'<div class="card empty">Aún no tienes ramos. Agrégalos en "Ramos y syllabus" o <button class="btn" onclick="loadDemo()">carga datos de ejemplo</button></div>':''}
+  ${!S.courses.length?'<div class="card empty">Aún no tienes ramos. Agrégalos en "Mis ramos y horario" o <button class="btn" onclick="go(\'ejemplos\')">carga datos de ejemplo</button></div>':''}
   ${checkinForm(false)}
   ${warnHtml()}${criticalHtml()}
   ${S.soft&&softOn(t0)?`<div class="banner soft">Modo suave activo hasta el ${dshort(S.soft.until)}: tu carga está al 75%. <button class="lnk" onclick="endSoft()">Desactivar</button></div>`:''}
   ${notes.map(n=>`<div class="banner info">${n}</div>`).join('')}
+  ${socialTodayHtml()}
   ${backupHtml()}
   <div class="card"><h2>Hoy</h2>
     <div class="stats">
@@ -134,7 +166,7 @@ function viewSemana(){
   h+=`<div class="lbl" style="padding:0;position:relative;height:${(H1-H0)*HH}px">${[...Array(H1-H0)].map((_,i)=>`<div style="position:absolute;top:${i*HH}px;font-size:10px;padding-left:4px">${pad(H0+i)}:00</div>`).join('')}</div>`;
   h+=days.map((d,i)=>`<div class="col ${d===t0?'today':''}" style="height:${(H1-H0)*HH}px">${S.classes.filter(k=>k.day===i).map(k=>{
     const top=(toMin(k.start)-H0*60)/60*HH,ht=(toMin(k.end)-toMin(k.start))/60*HH;
-    return `<div class="blk" style="top:${top}px;height:${ht}px;background:${ccolor(k.courseId)}">${esc(cname(k.courseId))}<br>${k.start}–${k.end}</div>`}).join('')}</div>`).join('');
+    return `<div class="blk" style="top:${top}px;height:${ht}px;background:${ccolor(k.courseId)}">${esc(cname(k.courseId))}<br>${k.start}–${k.end}</div>`}).join('')}${socialWeekBlocks(d,i)}</div>`).join('');
   return h+'</div></div></div>'+criticalHtml();
 }
 function gradeSummary(grades){
@@ -158,12 +190,7 @@ function gradesCard(c){
       <button class="btn sec" onclick="addGrade('${c.id}')">Agregar nota</button></div></div>`;
 }
 function viewRamos(){
-  const opts=S.courses.map(c=>`<option value="${c.id}" ${c.id===sylCourse?'selected':''}>${esc(c.name)}</option>`).join('');
-  const sorted=[...S.events].sort((a,b)=>a.date.localeCompare(b.date));
-  const who=S.profile&&S.profile.name?esc(S.profile.name):'';
-  const career=S.profile&&S.profile.career?` · ${esc(S.profile.career)}`:'';
   return `
-  <div class="card hud-welcome"><b>Perfil:</b> ${who}${career}</div>
   <div class="grid2">
     <div class="card"><h2>Mis ramos</h2>
       ${S.courses.map(c=>{const col=collective(c.name);return `<div class="task"><span class="dot" style="background:${c.color}"></span><b style="flex:1">${esc(c.name)}</b>
@@ -185,7 +212,12 @@ function viewRamos(){
         <span style="flex:1">${esc(cname(k.courseId))} · ${DAYS[k.day]} ${k.start}–${k.end}</span><button class="btn del" onclick="delClass('${k.id}')">Quitar</button></div>`).join('')}</div>
       <p class="mute">Tus horas de clase definen cuánto puedes estudiar cada día.</p>
     </div>
-  </div>
+  </div>`;
+}
+function viewSyllabus(){
+  const opts=S.courses.map(c=>`<option value="${c.id}" ${c.id===sylCourse?'selected':''}>${esc(c.name)}</option>`).join('');
+  const sorted=[...S.events].sort((a,b)=>a.date.localeCompare(b.date));
+  return `
   <div class="card"><h2>Subir syllabus</h2>
     <div class="row" style="margin-bottom:8px"><select onchange="sylCourse=this.value"><option value="">Elige el ramo…</option>${opts}</select>
       <input type="file" accept=".pdf,.txt,.md,.csv" onchange="onFile(this)"></div>
@@ -209,27 +241,31 @@ function viewRamos(){
     ${sorted.map(e=>`<div class="task"><span class="dot" style="background:${ccolor(e.courseId)}"></span>
       <span style="flex:1">${dshort(e.date)} · <b>${TYPE_LABEL[e.type]}</b> · ${esc(cname(e.courseId))} — ${esc(e.title)}${e.early?' <span class="tag">margen extra</span>':''}</span>
       <button class="btn del" onclick="delEvent('${e.id}')">Quitar</button></div>`).join('')||'<div class="empty">Sin fechas registradas.</div>'}
-  </div>
-  <div class="card"><h2>Notas y ponderaciones</h2>
+  </div>`;
+}
+function viewNotas(){
+  return `<div class="card"><h2>Notas y ponderaciones</h2>
     <p class="mute" style="margin-top:0">Registra evaluaciones por ramo con su nota y ponderación (%). El promedio ponderado se calcula automáticamente y se guarda en este navegador.</p>
     ${S.courses.length?S.courses.map(gradesCard).join(''):'<div class="empty">Agrega un ramo para registrar sus notas.</div>'}
-  </div>
-  <div class="card"><h2>Datos de ejemplo</h2><div class="row">
-    <button class="btn sec" onclick="loadDemo()">Cargar datos de ejemplo</button>
-    <span class="mute">Reemplaza tus datos actuales. Las demás opciones de datos están en Apoyo → Privacidad.</span></div></div>`;
+  </div>`;
+}
+function viewDatosEjemplo(){
+  return `<div class="card"><h2>Datos de ejemplo</h2>
+    <p class="mute" style="margin-top:0">Carga ramos, clases, fechas, sesiones pasadas y registros de bienestar falsos para recorrer la app sin datos personales. Reemplaza tus datos actuales.</p>
+    <div class="row"><button class="btn sec" onclick="loadDemo()">Cargar datos de ejemplo</button>
+    <span class="mute">Las demás opciones de datos están en Ajustes → Privacidad, donde también puedes descargar un respaldo antes.</span></div></div>`;
 }
 function trend(key,label,color){
   const dates=[...Array(14)].map((_,i)=>addDays(today(),i-13));
   return `<div class="mute">${label}</div><div class="trend">${dates.map(d=>{const e=ci(d);const v=e?e[key]:0;
     return `<i title="${dshort(d)}${v?': '+v+' de 5':': sin registro'}" style="height:${v?v*20:5}%;background:${v?color:'var(--line)'}"></i>`}).join('')}</div>`;
 }
-function viewBienestar(){
+function viewCheckin(){
   if(!draft)loadDraft();
   const ok=S.consent&&S.consent.health,pt=ok?patterns():null;
   const recent=[...S.wellbeing.diary].sort((a,b)=>b.date.localeCompare(a.date));
-  const T=TECH[bsel];
   return `
-  <div class="card"><h2>Bienestar</h2>
+  <div class="card"><h2>Check-in, diario y patrones</h2>
     <div class="mute">Guía de autocuidado: no es un diagnóstico ni un tratamiento. Tus registros se guardan solo en este navegador.</div></div>
   ${warnHtml()}
   ${checkinForm(true)}
@@ -238,6 +274,18 @@ function viewBienestar(){
       (pt.items.length?pt.items.map(x=>`<div class="insight">${x}</div>`).join('')+'<p class="mute" style="margin-bottom:0">Son coincidencias en tus propios datos, no causas ni diagnósticos.</p>':'<div class="empty">Por ahora no veo diferencias claras. Con más registros aparecerán.</div>')}
     ${trend('mood','Ánimo, últimos 14 días','#58bd8a')}${trend('energy','Energía, últimos 14 días','#3b6df0')}${trend('sleep','Sueño, últimos 14 días','#8d73f2')}
   </div>`:''}
+  ${ok?`<div class="card"><h3>Historial</h3>
+    ${recent.slice(0,10).map(e=>`<div class="task"><span style="font-size:22px">${MOODS[e.mood-1][0]}</span>
+      <span style="flex:1"><b>${dshort(e.date)}</b> · Ánimo ${MOODS[e.mood-1][1].toLowerCase()}${e.energy!=null?` · Energía ${ENERGY[e.energy-1][1].toLowerCase()} · Sueño ${SLEEP[e.sleep-1][1]}`:''}
+      ${(e.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join(' ')}${e.note?`<br><span class="mute">${esc(e.note)}</span>`:''}</span>
+      <button class="btn del" onclick="delDiary('${e.date}')">Borrar</button></div>`).join('')||'<div class="empty">Aún no hay registros.</div>'}</div>`:''}`;
+}
+function viewBienestar(){return viewCheckin()}
+function viewRespiracion(){
+  const T=TECH[bsel];
+  return `
+  <div class="card"><h2>Respiración y meditaciones</h2>
+    <div class="mute">Herramientas breves para bajar la activación. No son un tratamiento: solo te ayudan a hacer una pausa consciente.</div></div>
   <div class="grid2">
     <div class="card"><h3>Respiración guiada</h3>
       <select onchange="setTech(this.value)" style="width:100%">${Object.entries(TECH).map(([k,v])=>`<option value="${k}" ${k===bsel?'selected':''}>${v.name}</option>`).join('')}</select>
@@ -253,8 +301,11 @@ function viewBienestar(){
         <p class="mute">${m.desc}</p><ol>${m.steps.map(s=>`<li>${s}</li>`).join('')}</ol>
         <button class="btn sec" ${mt||bt?'disabled':''} onclick="startMed('${m.id}')">Iniciar temporizador (${m.min} min)</button></details>`).join('')}
     </div>
-  </div>
-  <div class="card"><h3>Pausas rápidas</h3>
+  </div>`;
+}
+function viewPausas(){
+  return `
+  <div class="card"><h2>Pausas rápidas</h2>
     <div class="pgrid">
       <div class="pcard"><b>Muévete 5 minutos</b><br>Camina o estira cuello, hombros y espalda tras cada bloque de estudio.</div>
       <div class="pcard"><b>Agua y luz natural</b><br>Toma agua y mira por la ventana unos minutos, lejos de las pantallas.</div>
@@ -262,14 +313,10 @@ function viewBienestar(){
       <div class="pcard"><b>Cuida el sueño</b><br>Dormir bien rinde más que una hora extra de estudio a medianoche.</div>
       <div class="pcard"><b>Habla con alguien</b><br>Un mensaje a un compañero o amigo también es una pausa válida.</div>
     </div></div>
-  ${ok?`<div class="card"><h3>Historial</h3>
-    ${recent.slice(0,10).map(e=>`<div class="task"><span style="font-size:22px">${MOODS[e.mood-1][0]}</span>
-      <span style="flex:1"><b>${dshort(e.date)}</b> · Ánimo ${MOODS[e.mood-1][1].toLowerCase()}${e.energy!=null?` · Energía ${ENERGY[e.energy-1][1].toLowerCase()} · Sueño ${SLEEP[e.sleep-1][1]}`:''}
-      ${(e.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join(' ')}${e.note?`<br><span class="mute">${esc(e.note)}</span>`:''}</span>
-      <button class="btn del" onclick="delDiary('${e.date}')">Borrar</button></div>`).join('')||'<div class="empty">Aún no hay registros.</div>'}</div>`:''}`;
+  ${pauseCard()}`;
 }
 function viewApoyo(){
-  const sp=S.support,ok=S.consent&&S.consent.health;
+  const sp=S.support;
   return `
   <div class="card"><h2>Apoyo</h2>
     <p style="margin-top:0">Esta app te ayuda a organizarte y a cuidarte, pero <b>no reemplaza a un profesional de la salud</b>. Si algo de lo que sientes te pesa o dura varios días, hablarlo con alguien es una buena decisión, no una señal de debilidad.</p>
@@ -290,13 +337,18 @@ function viewApoyo(){
       <div class="task"><span style="flex:1"><b>Emergencia inmediata</b><br><span class="mute">131 (ambulancia) o 133 (Carabineros) si hay peligro ahora.</span></span></div>
       <p class="mute" style="margin-bottom:0">Si no estás en Chile, busca la línea de crisis de tu país. Verifica los números en fuentes oficiales: pueden cambiar.</p>
     </div>
-  </div>
-  <div class="card"><h3>Privacidad y mis datos</h3>
+  </div>`;
+}
+function viewPrivacidad(){
+  const ok=S.consent&&S.consent.health;
+  return `<div class="card"><h2>Privacidad y mis datos</h2>
     <ul style="margin:0 0 10px 18px;padding:0">
-      <li>Todo se guarda <b>solo en este navegador</b>. La app no envía nada a ningún servidor y no usa cuentas.</li>
-      <li>${KEYOBJ?'Tus datos están cifrados con tu contraseña.':'Por defecto los datos no están cifrados: si compartes este equipo, activa el cifrado con contraseña (más abajo) o borra tus datos de bienestar.'}</li>
-      <li>El lector de PDF viene incluido en la app: tu archivo <b>no se sube</b>, se lee dentro de tu navegador, y la app no hace peticiones a servidores externos.</li>
-      <li>Los datos de bienestar (energía, ánimo, sueño, notas) son sensibles. Solo se guardan si das tu consentimiento, y puedes revocarlo cuando quieras.</li>
+      <li>Por defecto todo se guarda <b>solo en este navegador</b> y la app no hace peticiones externas. Puedes usarla siempre sin cuenta.</li>
+      <li>Si activas la sección <i>Amigos</i> e inicias sesión, al servidor van <b>solo</b> tu nombre visible, tu código de amigo, tus relaciones de amistad, las fechas de los ramos que marques explícitamente como compartidos y tus sesiones de estudio.</li>
+      <li>Los datos de bienestar (check-in, energía, ánimo, sueño, diario, notas personales y calificaciones) <b>nunca salen de este dispositivo</b>: no hay ninguna tabla para ellos en el servidor.</li>
+      <li>${KEYOBJ?'Tus datos locales están cifrados con tu contraseña.':'Por defecto los datos locales no están cifrados: si compartes este equipo, activa el cifrado con contraseña (más abajo) o borra tus datos de bienestar.'}</li>
+      <li>El lector de PDF viene incluido: tu archivo <b>no se sube</b>, se lee dentro de tu navegador.</li>
+      <li>Para borrar lo que sí se guarda en el servidor, ve a <i>Amigos → Eliminar mi cuenta y mis datos del servidor</i>. Eso no borra tus datos locales.</li>
     </ul>
     <p class="mute">Estado: ${!S.consent?'aún no decidiste si activar el check-in':(S.consent.health?'check-in activado':'check-in desactivado')}. Último respaldo: ${S.lastBackup?dshort(S.lastBackup):'nunca'}.</p>
     <div class="row">
@@ -306,7 +358,7 @@ function viewApoyo(){
       <button class="btn del" onclick="deleteHealth()">Borrar mis datos de bienestar</button>
       <button class="btn del" onclick="wipe()">Borrar todo</button></div>
     ${encryptionHtml()}
-    <p class="mute" style="margin-bottom:0">Si esta app llegara a guardar datos en un servidor, necesitaría consentimiento específico, una política de privacidad y revisar la Ley 21.719 de protección de datos personales de Chile (entra en vigencia el 1 de diciembre de 2026).</p>
+    <p class="mute" style="margin-bottom:0">La Ley 21.719 de protección de datos personales de Chile (vigente desde el 1 de diciembre de 2026) aplica a lo que se guarda en el servidor si usas Amigos: nombre visible, amistades, fechas compartidas y sesiones. Lo que queda solo en tu navegador no sale de él. Esto no es asesoría legal.</p>
   </div>`;
 }
 function viewSalud(){
@@ -373,7 +425,7 @@ function viewDatos(){
 }
 function viewTema(){
   const th=themeOk(S.settings&&S.settings.theme)?S.settings.theme:'cian';
-  const md=modeOk(S.settings&&S.settings.mode)?S.settings.mode:'dark';
+  const md=modeOk(S.settings&&S.settings.mode)?S.settings.mode:'light';
   return `
   <div class="card"><h2>Apariencia</h2>
     <p style="margin-top:0">Escoge el color de la aplicación y el modo de luz. La elección se guarda solo en este navegador.</p>
@@ -392,5 +444,117 @@ function viewTema(){
         <div class="preview-line"></div>
       </div>
     </div>
+  </div>`;
+}
+function viewAmigos(){
+  if(!socialConfigured())return `<div class="card"><h2>Amigos</h2>
+    <p style="margin-top:0">Esta función es opcional y <b>todavía no está configurada</b>. Para activarla, sigue la guía en <i>docs/SUPABASE.md</i> y completa <i>js/config.js</i> con la URL y la anon key de tu proyecto.</p>
+    <p class="mute">Mientras tanto la app funciona exactamente como antes: todo se guarda solo en este navegador y no se envía nada a ningún servidor.</p>
+    <button class="btn" onclick="socialStartDemo()">Probar con datos de ejemplo</button></div>`;
+  if(!socialAuth())return `<div class="card"><h2>Amigos</h2>
+    ${socialDemoBanner()}
+    <p style="margin-top:0">${socialDemoActive()?'Coordina sesiones de estudio y comparte fechas con amigos de ejemplo. El acceso es simulado: cualquier correo y cualquier código de 6 dígitos funcionan.':'Coordina sesiones de estudio y comparte fechas con amigos. El acceso es con un código de 6 dígitos que llega a tu correo (sin enlaces ni redirecciones).'}</p>
+    ${SOC.step==='code'?`<div class="soc-flow">
+      <p>Enviamos un código a <b>${esc(SOC.email)}</b>. Revísalo también en tu carpeta de spam.</p>
+      <div class="row"><input id="soc-code-otp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" style="width:150px;letter-spacing:.3em;text-align:center">
+      <button class="btn" ${SOC.busy?'disabled':''} onclick="socialSubmitCode()">Ingresar código</button>
+      <button class="btn sec" onclick="SOC.step='email';SOC.msg='';render()">Cambiar correo</button></div></div>`
+    :`<div class="soc-flow"><div class="row"><input id="soc-email" type="email" placeholder="tu@correo.cl" value="${esc(SOC.email)}" style="flex:1;min-width:220px">
+      <button class="btn" ${SOC.busy?'disabled':''} onclick="socialSubmitEmail()">Enviar código</button></div>
+      <p class="mute">Sin iniciar sesión la app sigue siendo 100 % local: tus datos de bienestar nunca salen de este dispositivo.</p></div>`}
+    ${SOC.msg?`<div class="banner info">${esc(SOC.msg)}</div>`:''}
+  </div>`;
+  if(SOC.step==='name')return `<div class="card"><h2>Tu nombre visible</h2>
+    ${socialDemoBanner()}
+    <p style="margin-top:0">¿Cómo quieres que te vean tus amigos? ${socialDemoActive()?'Este nombre se guarda solo en el ejemplo.':'Solo se guarda este nombre en el servidor.'} No enviamos tu carrera, tus notas ni ningún dato de bienestar.</p>
+    <div class="row"><input id="soc-name" maxlength="60" placeholder="Tu nombre" value="${esc(S.profile&&S.profile.name||'')}">
+    <button class="btn" ${SOC.busy?'disabled':''} onclick="socialSubmitName()">Crear mi perfil</button></div>
+    ${SOC.msg?`<div class="banner info">${esc(SOC.msg)}</div>`:''}
+    <p class="mute" style="margin-bottom:0">${socialDemoActive()?'Podrás cambiarlo si sales y vuelves a entrar al modo demo.':'Podrás cambiarlo más adelante desde tu perfil del servidor.'}</p></div>`;
+  if(!SOC.ready||!SOC.profile)return `<div class="card"><h2>Amigos</h2>
+    ${socialDemoBanner()}
+    ${SOC.error?`<div class="banner go"><b>No se pudo conectar.</b> ${esc(SOC.error)} El resto de la app sigue funcionando con tus datos locales.
+      <div class="row" style="margin-top:8px"><button class="btn sec" onclick="socialOpenTab()">Reintentar</button></div></div>`
+    :'<div class="empty">Cargando tus amigos…</div>'}</div>`;
+  const me=socialAuth().user_id,p=SOC.profile;
+  const statusLabel=s=>({invited:'Invitado',accepted:'Aceptó',declined:'No puede'}[s]||s);
+  const sessions=socialSessionFields();
+  const organized=sessions.filter(s=>s.host===me),invited=sessions.filter(s=>s.mine&&s.mine!=='host');
+  const sessionRow=s=>{
+    const c=socialSessionCourse(s),who=s.host===me?'Tú':socialName(s.host);
+    const state=s.mine==='accepted'?'<span class="tag soc-ok">Aceptada</span>':(s.mine==='invited'?'<span class="tag soc-wait">Pendiente</span>':(s.mine==='declined'?'<span class="tag">Rechazada</span>':''));
+    return `<div class="task"><span class="dot" style="background:${c?c.color:'var(--accent)'}"></span>
+      <span style="flex:1"><b>${dshort(s.date)} · ${esc(s.start_time)}–${esc(s.end_time)}</b> · ${esc(s.title)}<br>
+      <span class="mute">${esc(s.course_name)} · ${esc(who)}${s.place?' · '+esc(s.place):''}</span>${s.note?`<br><span class="mute">${esc(s.note)}</span>`:''}</span>
+      ${state}
+      ${s.host===me?`<button class="btn del" onclick="socialCancelSession('${esc(s.id)}')">Cancelar</button>`
+        :(s.mine==='invited'?`<button class="btn sec" onclick="socialRespondSession('${esc(s.id)}','accepted')">Aceptar</button>
+          <button class="btn del" onclick="socialRespondSession('${esc(s.id)}','declined')">Rechazar</button>`:'')}</div>`;
+  };
+  const guestTags=s=>s.invites.map(i=>`<span class="tag ${i.status==='accepted'?'soc-ok':(i.status==='declined'?'':'soc-wait')}">${esc(socialName(i.user_id))}: ${esc(statusLabel(i.status))}</span>`).join(' ');
+  const shared=socialFriendsShared(),groups={};
+  shared.forEach(e=>{(groups[e.owner]=groups[e.owner]||[]).push(e)});
+  const imported=S.events.filter(e=>e.src).sort((a,b)=>a.date.localeCompare(b.date));
+  return `
+  <div class="card hud-welcome">${socialDemoBanner()}
+  ${SOC.msg?`<div class="banner info">${esc(SOC.msg)}</div>`:''}
+  <div class="row" style="justify-content:space-between;align-items:flex-start">
+    <div><h2 style="margin:0">Hola, ${esc(p.display_name)}</h2>
+      <p class="mute" style="margin:4px 0 0">Tu código de amigo: <b class="hud-num soc-code">${esc(p.friend_code)}</b></p></div>
+    <div class="row"><button class="btn sec" onclick="socialCopyCode()">Copiar mi código</button>
+      <button class="btn sec" onclick="socialOpenTab()">Actualizar</button></div>
+  </div>
+  <p class="mute">${socialDemoActive()?'Estos amigos, sesiones y fechas viven solo en memoria mientras estés en el modo demo. Al importar una fecha de un amigo, sí se agrega a tus fechas reales de este navegador.':'Al servidor solo van tu nombre visible, tu código, tus amistades, las fechas de los ramos que marques como compartidos y tus sesiones de estudio.'} El check-in, la energía, el ánimo, el sueño, el diario, las notas y las calificaciones <b>nunca salen de este navegador</b>.</p>
+  ${SOC.error?`<div class="banner info">No se pudo actualizar: ${esc(SOC.error)}. Estás viendo la información guardada en memoria.</div>`:''}
+  <div class="row"><button class="lnk" onclick="socialLogout()">Cerrar sesión</button>
+    <button class="lnk soc-danger" onclick="socialDeleteAccount()">Eliminar mi cuenta y mis datos del servidor</button></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Agregar un amigo</h3>
+      <div class="row"><input id="soc-add-code" maxlength="8" placeholder="Código de 8 letras" style="flex:1;min-width:180px;text-transform:uppercase">
+      <button class="btn" ${SOC.busy?'disabled':''} onclick="socialSendRequest()">Enviar solicitud</button></div>
+      <p class="mute">Si la otra persona te agregó primero, al enviar el código se vuelven amigos automáticamente.</p>
+      <h4>Solicitudes recibidas</h4>
+      ${SOC.incoming.map(x=>`<div class="task"><span style="flex:1">${esc(x.person.display_name)}</span>
+        <button class="btn sec" onclick="socialRespondFriend('${esc(x.id)}',true)">Aceptar</button>
+        <button class="btn del" onclick="socialRespondFriend('${esc(x.id)}',false)">Rechazar</button></div>`).join('')||'<div class="empty">No hay solicitudes recibidas.</div>'}
+      <h4>Solicitudes enviadas</h4>
+      ${SOC.outgoing.map(x=>`<div class="task"><span style="flex:1">${esc(x.person.display_name)}</span><span class="tag soc-wait">Esperando respuesta</span></div>`).join('')||'<div class="empty">No hay solicitudes enviadas.</div>'}
+    </div>
+    <div class="card"><h3>Mis amigos</h3>
+      ${SOC.friends.map(p=>`<div class="task"><span class="dot" style="background:var(--accent)"></span>
+        <span style="flex:1">${esc(p.display_name)}</span><button class="btn del" onclick="socialRemoveFriend('${esc(p.id)}')">Quitar</button></div>`).join('')||'<div class="empty">Aún no tienes amigos. Comparte tu código o pide el de alguien más.</div>'}
+      <p class="mute" style="margin-bottom:0">No hay rachas, puntos ni comparaciones de tiempo: esto es solo para organizarse juntos.</p>
+    </div>
+  </div>
+  <div class="card"><h3>Sesiones de estudio</h3>
+    <div class="row"><input id="ss-title" placeholder="Título (ej. Repasar certamen)" style="flex:2;min-width:200px">
+      <input id="ss-course" list="ss-courses" placeholder="Ramo" style="flex:1;min-width:160px">
+      <datalist id="ss-courses">${S.courses.map(c=>`<option value="${esc(c.name)}">`).join('')}</datalist></div>
+    <div class="row" style="margin-top:8px"><input id="ss-date" type="date" value="${today()}">
+      <input id="ss-start" type="time" value="18:00"><input id="ss-end" type="time" value="19:30">
+      <input id="ss-place" placeholder="Lugar o enlace" style="flex:1;min-width:180px"></div>
+    <textarea id="ss-note" placeholder="Nota para quienes vayan (opcional)" style="margin-top:8px"></textarea>
+    <p class="mute" style="margin:10px 0 6px">Invitar a:</p>
+    <div class="soc-checks">${SOC.friends.map(p=>`<label class="soc-check"><input type="checkbox" name="ss-guest" value="${esc(p.id)}"> ${esc(p.display_name)}</label>`).join('')||'<span class="mute">Agrega amigos para poder invitarlos.</span>'}</div>
+    <div class="row" style="margin-top:10px"><button class="btn" ${SOC.busy||!SOC.friends.length?'disabled':''} onclick="socialCreateSession()">Crear sesión</button></div>
+    <h4>Próximas sesiones que organizo</h4>
+    ${organized.map(s=>`${sessionRow(s)}<div class="soc-guests">${guestTags(s)||'<span class="mute">Sin invitados</span>'}</div>`).join('')||'<div class="empty">No tienes sesiones organizadas.</div>'}
+    <h4>Sesiones a las que me invitaron</h4>
+    ${invited.map(sessionRow).join('')||'<div class="empty">No te han invitado a ninguna sesión.</div>'}
+  </div>
+  <div class="card"><h3>Fechas compartidas</h3>
+    <p class="mute" style="margin-top:0">Escoge tus ramos. Solo se envían el nombre del ramo, el título, el tipo y la fecha de cada evaluación, entrega o control.</p>
+    ${S.courses.map(c=>`<div class="share-row"><span class="dot" style="background:${c.color}"></span><b style="flex:1">${esc(c.name)}</b>
+      <label class="soc-switch"><input type="checkbox" ${c.share?'checked':''} onchange="setShare('${esc(c.id)}',this.checked)"> Compartir las fechas de este ramo con mis amigos</label></div>`).join('')||'<div class="empty">Agrega ramos para poder compartir fechas.</div>'}
+    <h4>Fechas que comparten mis amigos</h4>
+    ${Object.keys(groups).map(o=>`<div class="soc-friend-group"><h4>${esc(socialName(o))}</h4>
+      ${groups[o].sort((a,b)=>a.date.localeCompare(b.date)).map((e,i)=>{
+        const match=S.courses.find(c=>norm(c.name)===norm(e.course_name));
+        return `<div class="task"><span style="flex:1"><b>${dshort(e.date)}</b> · ${esc(TYPE_LABEL[e.type]||e.type)} · ${esc(e.course_name)} — ${esc(e.title)}</span>
+          <select id="soc-imp-${o.slice(0,6)}-${i}" aria-label="Ramo destino">${S.courses.map(c=>`<option value="${esc(c.id)}" ${match&&c.id===match.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select>
+          <button class="btn sec" ${S.courses.length?'':'disabled'} onclick="socialImportEvent('${esc(e.owner)}','${esc(e.id)}',document.getElementById('soc-imp-${o.slice(0,6)}-${i}').value)">Agregar a mis fechas</button></div>`;
+      }).join('')}</div>`).join('')||'<div class="empty">Por ahora nadie ha compartido fechas contigo.</div>'}
+    ${imported.length?`<h4>Fechas que ya importé</h4>${imported.map(e=>`<div class="task"><span style="flex:1">${dshort(e.date)} · ${esc(TYPE_LABEL[e.type]||e.type)} · ${esc(cname(e.courseId))} — ${esc(e.title)}</span><span class="tag soc-ok">Ya en tus fechas</span></div>`).join('')}`:''}
   </div>`;
 }

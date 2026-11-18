@@ -33,7 +33,9 @@ server.listen(0, '127.0.0.1', async () => {
   const codes = [
     await run('ui.test.js', [path.join(root, 'index.html'), path.join(out, 'ui')]),   // por file://
     await run('pwa.test.js', [base, path.join(out, 'pwa')]),                          // por http: PWA, respaldo, .ics, PDF
-    await run('crypto.test.js', [base, path.join(out, 'crypto')])                     // cifrado con contraseña
+    await run('crypto.test.js', [base, path.join(out, 'crypto')]),                    // cifrado con contraseña
+    await run('social.test.js', [base, path.join(out, 'social')]),                    // Amigos con backend simulado
+    await run('demo.test.js', [base, path.join(out, 'demo')])                         // modo demo sin red
   ];
   server.close();
   const failed = codes.filter(c => c !== 0).length;
