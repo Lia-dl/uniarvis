@@ -49,43 +49,6 @@ function icsPendingHtml(){
     <div class="row" style="margin-top:8px"><button class="btn" onclick="confirmICS()">Confirmar y agregar al horario</button>
       <button class="btn sec" onclick="cancelICS()">Cancelar</button></div></div>`;
 }
-function introHtml(){
-  if(typeof introActive!=='function'||!introActive())return '';
-  const total=3,step=introStep,totalTxt=`${step}/${total}`;
-  let body='';
-  if(step===1){
-    body=`<p class="mute" style="margin-top:0">Empieza con lo mínimo: escribe tus ramos y, si quieres, sube un syllabus para tener las fechas a mano.</p>
-      <div class="hud-form" style="max-width:520px">
-        <label>Nombre del ramo<input id="ob-cn" type="text" maxlength="80" placeholder="Ej. Cálculo III"></label>
-        <label>Dificultad<select id="ob-cd" title="Dificultad">${[1,2,3,4,5].map(n=>`<option ${n===3?'selected':''}>${n}</option>`).join('')}</select></label>
-      </div>
-      <div class="row" style="margin-top:8px"><button class="btn" data-focus-id="intro-add-course" onclick="introAddCourse()">Agregar ramo</button>
-        <button class="btn sec" onclick="go('syllabus')">Subir syllabus</button></div>
-      <p class="mute"><button class="lnk" onclick="loadDemo()">Prefiero ver un ejemplo primero</button> · también puedes hacerlo después en Ajustes → Datos de ejemplo.</p>`;
-  }else if(step===2){
-    body=`<p class="mute" style="margin-top:0">Importa tu horario desde el calendario o agrégalo a mano. Solo se guarda lo que confirmes.</p>
-      <div class="row"><label class="btn sec" style="cursor:pointer">Importar desde calendario (.ics)<input type="file" accept=".ics,text/calendar" style="display:none" onchange="onICSFile(this)"></label></div>
-      ${S.courses.length?`<div class="row" style="margin-top:8px"><select id="ob-kc">${S.courses.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select>
-        <select id="ob-kd">${DAYS.map((d,i)=>`<option value="${i}">${d}</option>`).join('')}</select>
-        <input id="ob-ka" type="time" value="08:10"><input id="ob-kb" type="time" value="09:40">
-        <button class="btn" data-focus-id="intro-add-class" onclick="introAddClass()">Agregar</button></div>`
-      :'<p class="mute">Aún no hay ramos: si importas un .ics, crearemos los ramos por ti.</p>'}
-      ${icsPendingHtml()}`;
-  }else{
-    body=`<p class="mute" style="margin-top:0">El check-in diario toma 20 segundos y registra energía, ánimo y sueño.</p>
-      <p class="mute">Con eso ajusto tu capacidad del día y, si hace falta, dejo solo lo esencial. Es optativo, puedes revocarlo cuando quieras.</p>
-      ${consentCard(true)}`;
-  }
-  return `<div class="card" id="onboarding" aria-label="Introducción">
-    <div class="row" style="justify-content:space-between"><h2 style="margin:0">Configura tu semestre</h2><span class="tag" aria-label="Paso ${step} de ${total}">${totalTxt}</span></div>
-    <p class="mute">${['Ramos','Horario','Primer check-in'][step-1]}</p>
-    ${body}
-    <div class="row" style="justify-content:space-between;margin-top:10px">
-      <button class="btn sec" onclick="introPrev()" ${step===1?'disabled':''}>Atrás</button>
-      <div class="row"><button class="lnk" onclick="introFinish('skipped')">Saltar</button>
-      ${step<3?'<button class="btn" data-focus-id="intro-next" onclick="introNext()">Siguiente</button>':'<button class="btn" data-focus-id="intro-done" onclick="introFinish(\'done\')">Listo</button>'}</div>
-    </div></div>`;
-}
 function viewInicio(){
   const name=S.profile&&S.profile.name?esc(S.profile.name):'';
   const descs={planificacion:'Tu día y tu semana, sin sobrecargas.',academico:'Ramos, fechas, notas y carga.',bienestar:'Check-in, pausas y apoyo.',social:'Coordina sesiones con amigos.',ajustes:'Perfil, tema y privacidad.'};
@@ -98,7 +61,6 @@ function viewInicio(){
     <span class="home-copy"><b>${s.label}</b><span>${descs[s.key]||''}</span></span>
     <span class="home-arrow" aria-hidden="true">→</span></button>`}).join('');
   return `${screenHelp('inicio')}
-  ${introHtml()}
   <div class="home-head"><div><h2>Hola, ${name}</h2><p class="mute" style="margin-bottom:0">Elige por dónde empezar hoy.</p></div></div>
   ${arvisInicioHtml()}
   ${homeNotice()}
@@ -115,8 +77,7 @@ function viewPerfil(){
       <button class="btn" data-focus-id="save-profile" onclick="saveProfile()">Guardar cambios</button>
     </div></div>`;
 }
-function consentCard(onboarding){
-  const yes=onboarding?'introConsent(true)':'setConsent(true)',no=onboarding?'introConsent(false)':'setConsent(false)';
+function consentCard(){
   return `<div class="card"><h3>Antes de empezar: tus datos de bienestar</h3>
     <p style="margin-top:0">El check-in y el diario guardan datos sensibles (energía, ánimo, sueño y notas). Así funcionan:</p>
     <ul style="margin:0 0 10px 18px;padding:0">
@@ -124,8 +85,8 @@ function consentCard(onboarding){
       <li>Los usa la propia app para ajustar tu plan y mostrarte patrones. No hay diagnósticos, puntajes ni rachas.</li>
       <li>Puedes exportarlos, revocar el permiso o borrarlos cuando quieras (en <i>Ajustes → Privacidad</i>).</li>
     </ul>
-    <div class="row"><button class="btn" onclick="${yes}">Acepto y quiero usar el check-in</button>
-    <button class="btn sec" onclick="${no}">Ahora no</button></div>
+    <div class="row"><button class="btn" onclick="setConsent(true)">Acepto y quiero usar el check-in</button>
+    <button class="btn sec" onclick="setConsent(false)">Ahora no</button></div>
     <p class="mute" style="margin-bottom:0">Sin check-in la app igual funciona: calcula tu capacidad con tus clases y tu ritmo.</p></div>`;
 }
 function scaleRow(label,key,arr){
@@ -307,6 +268,11 @@ function gradesCard(c){
       <input id="gw-${c.id}" type="text" inputmode="decimal" placeholder="%" style="width:80px">
       <button class="btn sec" data-focus-id="add-grade-${c.id}" onclick="addGrade('${c.id}')">Agregar nota</button></div></div>`;
 }
+function demoCardHtml(){
+  return `<div class="card"><h3>Datos de ejemplo</h3>
+    <div class="row"><button class="btn sec" data-focus-id="load-demo" onclick="loadDemo()">Cargar datos de ejemplo</button>
+      <span class="mute">Reemplaza tus datos actuales. También está en Ajustes → Datos de ejemplo.</span></div></div>`;
+}
 function viewRamos(){
   return `${screenHelp('ramos')}
   <div class="grid2">
@@ -331,7 +297,8 @@ function viewRamos(){
         <span style="flex:1">${esc(cname(k.courseId))} · ${DAYS[k.day]} ${k.start}–${k.end}</span><button class="btn del" onclick="delClass('${k.id}')">Quitar</button></div>`).join('')}</div>
       <p class="mute">Tus horas de clase definen cuánto puedes estudiar cada día.</p>
     </div>
-  </div>`;
+  </div>
+  ${demoCardHtml()}`;
 }
 function viewSyllabus(){
   const opts=S.courses.map(c=>`<option value="${c.id}" ${c.id===sylCourse?'selected':''}>${esc(c.name)}</option>`).join('');
@@ -360,7 +327,8 @@ function viewSyllabus(){
     ${sorted.map(e=>`<div class="task"><span aria-hidden="true" class="dot" style="background:${ccolor(e.courseId)}"></span>
       <span style="flex:1">${dshort(e.date)} · <b>${TYPE_LABEL[e.type]}</b> · ${esc(cname(e.courseId))} — ${esc(e.title)}${e.early?' <span class="tag">margen extra</span>':''}</span>
       <button class="btn del" onclick="delEvent('${e.id}')">Quitar</button></div>`).join('')||'<div class="empty">Aún no hay fechas registradas. Analiza un syllabus o usa el formulario y toca <b>Agregar manualmente</b>.</div>'}
-  </div>`;
+   </div>
+   ${demoCardHtml()}`;
 }
 function viewNotas(){
   return `${screenHelp('notas')}<div class="card"><h2>Notas y ponderaciones</h2>
@@ -551,8 +519,7 @@ function viewTema(){
     </div>
   </div>
   <div class="card"><h3>Tutorial</h3><p class="mute" style="margin-top:0">Puedes volver a ver la guía de bienvenida con los pasos de cada sección.</p>
-    <div class="row"><button class="btn sec" onclick="startTour(true)">Ver tutorial de nuevo</button>
-      <button class="btn sec" data-focus-id="restart-intro" onclick="restartIntro()">Ver la introducción de nuevo</button></div></div>`;
+    <div class="row"><button class="btn sec" onclick="startTour(true)">Ver tutorial de nuevo</button></div></div>`;
 }
 function viewAmigos(){
   if(!socialConfigured())return `${screenHelp('amigos')}<div class="card"><h2>Amigos</h2>

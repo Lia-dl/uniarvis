@@ -39,7 +39,7 @@ const fs=require('fs');
     await p.locator('.hud-btn').click();
   }
   await p.evaluate(()=>{
-    S=fresh();S.profile={name:'Estudiante',career:'Carrera',onboarded:true};
+    S=fresh();S.profile={name:'Estudiante',career:'Carrera'};
     S.consent={health:true,at:today()};
     S.courses=[{id:'c1',name:'Cálculo III',difficulty:3,color:'#3b6df0',grades:[],share:false},
       {id:'c2',name:'Economía',difficulty:2,color:'#e0693a',grades:[],share:false}];

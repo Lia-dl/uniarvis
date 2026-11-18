@@ -15,7 +15,7 @@ const path=require('path');
     await p.locator('.hud-btn').click();
   }
   await p.evaluate(()=>{
-    S=fresh();S.profile={name:'Prueba',career:'Carrera',onboarded:true};
+    S=fresh();S.profile={name:'Prueba',career:'Carrera'};
     S.courses=[{id:'c1',name:'Cálculo',difficulty:3,color:'#3b6df0',grades:[],share:false,passGrade:4,roundFinal:true}];
     S.lastPlan=today();save();go('inicio');
   });
@@ -96,7 +96,7 @@ const path=require('path');
   ok('estados vacíos muestran Arvis normal con instrucciones',vacio.srcR==='icons/arvis/arvis-normal.svg'&&vacio.srcT==='icons/arvis/arvis-normal.svg',JSON.stringify(vacio));
 
   await p.evaluate(()=>{
-    S=fresh();S.profile={name:'Prueba',career:'Carrera',onboarded:true};
+    S=fresh();S.profile={name:'Prueba',career:'Carrera'};
     S.courses=[{id:'c1',name:'Cálculo',difficulty:3,color:'#3b6df0',grades:[],share:false,passGrade:4,roundFinal:true}];
     save();go('inicio');
   });

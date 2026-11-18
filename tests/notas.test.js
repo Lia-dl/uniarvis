@@ -15,7 +15,7 @@ const path=require('path');
     await p.locator('.hud-btn').click();
   }
   await p.evaluate(()=>{
-    S=fresh();S.profile={name:'Prueba',career:'Carrera',onboarded:true};
+    S=fresh();S.profile={name:'Prueba',career:'Carrera'};
     S.courses=[{id:'c1',name:'Cálculo',difficulty:3,color:'#3b6df0',grades:[],share:false,passGrade:4,roundFinal:true}];
     S.events.push({id:'e1',courseId:'c1',title:'Certamen 2',date:addDays(today(),3),type:'evaluacion'});
     save();go('notas');
