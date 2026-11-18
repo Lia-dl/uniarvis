@@ -332,3 +332,27 @@ filter:blur(10px);opacity:.9;animation:hudPulse 8s ease-in-out infinite alternat
   [data-style="calma"] .mobile-nav{box-shadow:0 -2px 10px rgba(0,0,0,.06)}
 }
 
+/* Ayuda contextual y tour de bienvenida */
+.help-bar{display:flex;justify-content:flex-end;margin-bottom:8px}
+.help-btn{width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--mute);font-weight:700;cursor:pointer;display:grid;place-items:center;transition:all .2s ease}
+.help-btn:hover{color:var(--accent-strong);border-color:var(--accent);box-shadow:var(--ring)}
+.modal-backdrop{position:fixed;inset:0;background:rgba(5,11,20,.55);backdrop-filter:blur(4px);display:grid;place-items:center;padding:20px;z-index:20;animation:fadeSlide .18s ease}
+:root[data-mode="light"] .modal-backdrop{background:rgba(21,34,52,.28)}
+.modal-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-md);width:min(560px,100%);max-height:85vh;overflow:auto;padding:20px 22px}
+.modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+.modal-head h3{margin:0}
+.icon-btn{width:32px;height:32px;border-radius:10px;border:1px solid var(--line);background:var(--bg-subtle);color:var(--mute);cursor:pointer;font-size:16px;line-height:1}
+.icon-btn:hover{color:var(--ink);border-color:var(--accent)}
+.help-steps{margin:8px 0 0 20px;padding:0;display:grid;gap:6px;line-height:1.55}
+.tour-backdrop{z-index:30}
+.tour-modal{position:relative;text-align:center;padding:28px 26px 22px}
+.tour-skip{position:absolute;top:12px;right:14px;background:none;border:0;color:var(--mute);cursor:pointer;font:inherit;font-size:13px}
+.tour-skip:hover{color:var(--accent-strong);text-decoration:underline}
+.tour-icon{font-size:44px;line-height:1;margin:4px 0 10px}
+.tour-title{margin:0 0 8px;font-size:20px}
+.tour-text{margin:0 auto 16px;max-width:420px;color:var(--mute);line-height:1.6}
+.tour-dots{display:flex;justify-content:center;gap:8px;margin:4px 0 18px}
+.tour-dot{width:8px;height:8px;border-radius:50%;background:var(--line-strong);opacity:.45;transition:all .2s ease}
+.tour-dot.on{width:22px;border-radius:999px;background:var(--accent);opacity:1;box-shadow:0 0 10px rgba(var(--accent-rgb),.35)}
+.tour-actions{display:flex;justify-content:space-between;gap:12px}
+@media (max-width:640px){.tour-modal{padding:24px 18px 18px}.tour-actions{gap:8px}.modal-card{padding:16px}}

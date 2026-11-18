@@ -139,6 +139,7 @@ function start(){
   render();
   if(typeof socialBoot==='function')socialBoot();
   if(tab==='amigos'&&typeof socialOpenTab==='function')socialOpenTab();
+  if(typeof maybeShowTour==='function')maybeShowTour();
 }
 window.addEventListener('hashchange',goFromRoute);
 window.addEventListener('popstate',goFromRoute);

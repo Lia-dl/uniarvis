@@ -64,6 +64,7 @@ function registerProfile(){
   if(!name||!career)return toast('Ingresa tu nombre y carrera.');
   S.profile={name:name.slice(0,60),career:career.slice(0,80),onboarded:true};
   save();toast(`Bienvenido/a, ${S.profile.name}.`);render();
+  if(typeof maybeShowTour==='function')maybeShowTour();
 }
 function saveProfile(){
   const n=($('#pf-name')||{}).value||'',c=($('#pf-career')||{}).value||'';
