@@ -17,6 +17,7 @@ const ROUTE={
   pausas:{section:'bienestar',tab:'pausas'},apoyo:{section:'bienestar',tab:'apoyo'},
   amigos:{section:'social',tab:'amigos'},
   perfil:{section:'ajustes',tab:'perfil'},tema:{section:'ajustes',tab:'tema'},apariencia:{section:'ajustes',tab:'tema'},
+  arvis:{section:'ajustes',tab:'arvis'},
   privacidad:{section:'ajustes',tab:'privacidad'},ejemplos:{section:'ajustes',tab:'ejemplos'}
 };
 const FIRST={inicio:'inicio',planificacion:'hoy',academico:'ramos',bienestar:'checkin',social:'amigos',ajustes:'perfil'};
@@ -109,7 +110,7 @@ function render(){
   }
   const views={inicio:viewInicio,hoy:viewHoy,semana:viewSemana,ramos:viewRamos,syllabus:viewSyllabus,notas:viewNotas,herramientas:viewTools,salud:viewSalud,
     checkin:viewCheckin,bienestar:viewBienestar,respiracion:viewRespiracion,pausas:viewPausas,apoyo:viewApoyo,
-    amigos:viewAmigos,perfil:viewPerfil,tema:viewTema,privacidad:viewPrivacidad,ejemplos:viewDatosEjemplo};
+    amigos:viewAmigos,perfil:viewPerfil,tema:viewTema,arvis:viewArvis,privacidad:viewPrivacidad,ejemplos:viewDatosEjemplo};
   const sec=SECTIONS.find(s=>s.key===section);
   let chips='';
   if(sec&&sec.tabs.length&&section!=='inicio'){
@@ -149,6 +150,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkNewDa
 setInterval(()=>checkNewDay(),60000);
 boot();
 if(LOCKED)render();else start();
+if(typeof logrosRevisar==='function')logrosRevisar();
 
 /* App instalable y utilizable sin internet (el service worker solo funciona en https o localhost) */
 if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});

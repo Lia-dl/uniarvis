@@ -64,7 +64,20 @@ function cleanTools(t){
   return out;
 }
 const migrateTools=t=>cleanTools(t);
-const fresh=()=>({courses:[],classes:[],events:[],tasks:[],sessions:[],settings:{min:60,theme:'cian',mode:'light',style:'calma',arvis:true},lastPlan:null,
+const ARVIS_ITEM_IDS=['gorro','lentes','bufanda','audifonos','birrete','capa'];
+function freshArvis(){return {equipado:'',desbloqueados:[],vistos:[],pomodoros:0,mazos:0,planSemanal:false}}
+function cleanArvis(v){
+  const out=freshArvis();
+  if(!v||typeof v!=='object'||Array.isArray(v))return out;
+  if(Array.isArray(v.desbloqueados))out.desbloqueados=[...new Set(v.desbloqueados.filter(id=>ARVIS_ITEM_IDS.indexOf(id)>=0))].slice(0,ARVIS_ITEM_IDS.length);
+  if(Array.isArray(v.vistos))out.vistos=[...new Set(v.vistos.filter(id=>ARVIS_ITEM_IDS.indexOf(id)>=0))].slice(0,ARVIS_ITEM_IDS.length);
+  out.pomodoros=Number.isInteger(v.pomodoros)&&v.pomodoros>=0?Math.min(v.pomodoros,1000000):0;
+  out.mazos=Number.isInteger(v.mazos)&&v.mazos>=0?Math.min(v.mazos,1000000):0;
+  out.planSemanal=v.planSemanal===true;
+  if(ARVIS_ITEM_IDS.indexOf(v.equipado)>=0&&out.desbloqueados.indexOf(v.equipado)>=0)out.equipado=v.equipado;
+  return out;
+}
+const fresh=()=>({courses:[],classes:[],events:[],tasks:[],sessions:[],settings:{min:60,theme:'cian',mode:'light',style:'calma',arvis:true},arvis:freshArvis(),lastPlan:null,
   wellbeing:{diary:[]},frases:{favs:[]},createdAt:today(),lastBackup:null,backupSnooze:null,consent:null,soft:null,adapt:null,moved:null,dismissed:{},support:{name:'',contact:''},profile:{name:'',career:''},certamen:{plans:[],topicsByCourse:{}},tools:freshTools()});
 function migrate(s){
   const f=fresh();for(const k in f)if(s[k]===undefined)s[k]=f[k];
@@ -77,6 +90,7 @@ function migrate(s){
   if(!modeOk(s.settings.mode))s.settings.mode='light';
   if(!styleOk(s.settings.style))s.settings.style='hud';
   if(typeof s.settings.arvis!=='boolean')s.settings.arvis=true;
+  s.arvis=cleanArvis(s.arvis);
   delete s.settings.max;                          // la capacidad máxima ahora se calcula cada día
   delete s.reviews;                               // reseñas de texto libre de versiones anteriores: ya no se guardan
   delete s.ratings;                               // aportes anónimos de ramos de versiones anteriores: ya no se guardan
@@ -104,7 +118,15 @@ function boot(){                  // lee lo guardado; si está cifrado, queda en
 }
 let C={};                         // caché de cálculos; se invalida en cada cambio
 const inval=()=>{C={}};
-function save(){inval();persist();try{if(typeof socialAfterSave==='function')socialAfterSave()}catch(e){}}
+let logrosRevisando=false;
+function save(){
+  inval();persist();
+  try{if(typeof socialAfterSave==='function')socialAfterSave()}catch(e){}
+  if(typeof logrosRevisar==='function'&&!logrosRevisando){
+    logrosRevisando=true;
+    try{logrosRevisar()}finally{logrosRevisando=false}
+  }
+}
 function persist(){
   const json=JSON.stringify(S);
   if(KEYOBJ)writeQ=writeQ.then(()=>encryptState(json)).then(s=>{try{localStorage.setItem(KEY,s)}catch(e){}}).catch(()=>{});

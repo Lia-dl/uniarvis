@@ -34,6 +34,7 @@ function pomFinishPhase(p,now){
   const from=p.phase;
   if(from==='focus'){
     p.pomodoros++;
+    arvisConfig().pomodoros++;
     pomLogFocus(p);
     if(p.pomodoros>=p.longEvery){p.phase='long';p.pomodoros=0}
     else p.phase='short';
@@ -239,6 +240,7 @@ function startFlashcards(){
   const d=fcActiveDeck();if(!d)return toast('Crea o abre un mazo primero.');
   const due=flashcardsDue(d,today()).slice(0,fcCfg().limit);
   if(!due.length)return toast('Por hoy no hay tarjetas que tocar en este mazo.');
+  arvisConfig().mazos++;save();
   fcSession={deckId:d.id,queue:due.map(c=>c.id),reviewed:0,tomorrow:0};fcShow=false;fcEditId='';render();
 }
 function showFlashcardAnswer(){fcShow=true;render()}

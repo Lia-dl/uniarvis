@@ -147,6 +147,37 @@ textarea{width:100%;min-height:96px;resize:vertical}
 .arvis-avatar{width:56px;height:56px;flex:0 0 56px;border-radius:50%;background:var(--bg-subtle);border:1px solid var(--line)}
 @keyframes arvis-in{0%{opacity:0;transform:translateY(8px) scale(.96)}60%{opacity:1;transform:translateY(-3px) scale(1.02)}100%{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.arvis-card{animation:none}}
+.arvis-figura{position:relative;display:inline-block;width:var(--arvis-size,96px);height:calc(var(--arvis-size,96px)*1.2);flex:0 0 var(--arvis-size,96px)}
+.arvis-figura img,.arvis-figura svg{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:contain}
+.arvis-figura .arvis-atras{z-index:0}
+.arvis-figura .arvis-base{z-index:1}
+.arvis-figura .arvis-accesorio{z-index:2;pointer-events:none}
+.arvis-card .arvis-figura img,.arvis-card .arvis-figura svg{flex-basis:auto}
+.arvis-card.arvis-sm .arvis-figura{--arvis-size:56px}
+.arvis-tocable{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:0;border:0;border-radius:14px;background:transparent;cursor:pointer;flex:0 0 auto}
+.arvis-tocable:hover .arvis-figura{transform:translateY(-2px)}
+.arvis-tocable:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.arvis-tocable .arvis-figura{transition:transform .15s ease}
+.help-with-arvis .arvis-figura{width:56px;height:56px;flex:0 0 56px;border-radius:50%;overflow:hidden;background:var(--bg-subtle);border:1px solid var(--line)}
+.help-with-arvis .arvis-figura img{object-fit:cover;object-position:top}
+.arvis-personalizar .arvis-preview{display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+.arvis-preview .arvis-figura{--arvis-size:180px}
+.accesorios{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.accesorio{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;text-align:center;cursor:pointer;transition:border-color .2s ease,box-shadow .2s ease,transform .15s ease}
+.accesorio:hover:not(:disabled){border-color:var(--accent);transform:translateY(-1px)}
+.accesorio.on{border-color:rgba(var(--accent-rgb),.7);box-shadow:var(--ring)}
+.accesorio.lock{cursor:not-allowed;background:var(--bg-subtle);color:var(--mute)}
+.accesorio.lock .arvis-figura{filter:grayscale(1);opacity:.5}
+.accesorio-preview{display:grid;place-items:center;min-height:90px}
+.accesorio-copy{display:grid;gap:3px;font-size:13px;line-height:1.4}
+.accesorio-candado{position:absolute;top:10px;right:10px;width:26px;height:26px;display:grid;place-items:center;border-radius:50%;background:var(--card);border:1px solid var(--line);color:var(--mute)}
+.accesorio-candado svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.logro-lista{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.logro-fila{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg-subtle)}
+.logro-fila.on{border-color:rgba(var(--accent-rgb),.4);background:var(--accent-soft)}
+.logro-fila>span:last-child{display:grid;gap:2px}
+.logro-marcador{flex:0 0 20px;height:20px;display:grid;place-items:center;border-radius:50%;border:1px solid var(--line);color:var(--mute);font-size:12px}
+.logro-fila.on .logro-marcador{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .boxes{display:grid;grid-template-columns:repeat(auto-fill,minmax(34px,1fr));gap:6px;margin:12px 0}
 .box{height:34px;border-radius:8px;border:1.5px solid var(--line);background:linear-gradient(to top,var(--accent) var(--f),transparent var(--f));position:relative;transition:border-color .2s ease,background .3s ease}
 .box.min{border-color:var(--warn);box-shadow:inset 0 0 0 1px rgba(var(--warn-rgb),.15)}
@@ -330,6 +361,10 @@ filter:blur(10px);opacity:.9;animation:hudPulse 8s ease-in-out infinite alternat
   .arvis-card{gap:10px;padding:10px}
   .arvis-card img{width:72px;flex-basis:72px}
   .arvis-card.arvis-sm img{width:48px;flex-basis:48px}
+  .arvis-card .arvis-figura{--arvis-size:72px}
+  .arvis-card.arvis-sm .arvis-figura{--arvis-size:48px}
+  .arvis-preview .arvis-figura{--arvis-size:140px}
+  .accesorios{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
   .arvis-bubble{padding:10px 12px}
   .home-icon{flex-basis:40px;height:40px}
   .home-arrow{display:none}
